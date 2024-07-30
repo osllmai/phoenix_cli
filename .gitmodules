@@ -1,0 +1,9 @@
+[submodule "cxxopts"]
+	path = cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
+[submodule "external/cxxopts"]
+	path = external/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
+[submodule "phoenix/llama.cpp-mainline"]
+	path = phoenix/llama.cpp-mainline
+	url = https://github.com/nomic-ai/llama.cpp.git
