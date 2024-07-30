@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
-#include <iostream>
+#include <map>
 
-std::string list_of_models_available(const std::string &model_name);
+std::map<std::string, std::string> list_of_models_available();
+
+std::string get_url_llm_download(const std::string &model_name);
