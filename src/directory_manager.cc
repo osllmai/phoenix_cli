@@ -55,12 +55,13 @@ void DirectoryManager::handle_application_directory() {
 
     std::string app_dir = home_directory + "/.phoenix";
 
-    if (create_home_directory(app_dir)) {
-        std::cout << "Home directory for application crated" << std::endl;
-    } else {
-        std::cerr << "Already home directory created" << std::endl;
-        return;
-    }
+    create_home_directory(app_dir);
+    /*if () {
+       std::cout << "Home directory for application crated" << std::endl;
+   } else {
+       std::cerr << "Already home directory created" << std::endl;
+       return;
+   }*/
 }
 
 std::string DirectoryManager::get_app_home_path() {
@@ -85,4 +86,17 @@ std::string DirectoryManager::find_llm_in_app_home(const std::string &filename) 
 
     std::cerr << filename << " is not located or downloaded" << std::endl;
     return "";
+}
+
+
+std::vector<std::string> DirectoryManager::local_models() {
+    std::vector<std::string> models{};
+
+    for (const auto &entry: fs::directory_iterator(get_app_home_path())) {
+        if (entry.is_regular_file()) {
+            models.push_back(entry.path().filename().string());
+        }
+    }
+
+    return models;
 }

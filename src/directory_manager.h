@@ -6,6 +6,7 @@
 #define PHOENIX_DIRECTORY_MANAGER_H
 
 #include <string>
+#include <vector>
 
 
 class DirectoryManager {
@@ -19,6 +20,8 @@ public:
     static std::string get_app_home_path();
 
     static std::string find_llm_in_app_home(const std::string& filename);
+
+    static std::vector<std::string> local_models();
 };
 
 
