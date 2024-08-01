@@ -62,7 +62,7 @@ void show_commands(int argc, char **argv) {
 
                 std::string model_name = argv[i + 1];
                 std::string model_url = get_url_llm_download(model_name);
-                const std::string model_path = DirectoryManager::get_app_home_path() + "/" + model_name;
+                const std::string model_path = DirectoryManager::get_app_home_path() + "/" + model_name + ".gguf";
 
                 if (download_model_file(model_url, model_path)) {
                     std::cout << "Model downloaded successfully!";
@@ -73,7 +73,7 @@ void show_commands(int argc, char **argv) {
                 }
             }
         } else if (arg == "--version" || arg == "-v") {
-            std::cout << "Current version is 0.1.0" << std::endl;
+            std::cout << "Current version is 0.0.3" << std::endl;
             return;
         } else if (arg == "list") {
             if (i + 1 < argc) {
