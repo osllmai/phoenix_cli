@@ -28,6 +28,7 @@ void show_commands(int argc, char **argv) {
             std::cout << "Available Commands:" << std::endl;
             std::cout << "  list\tList models" << std::endl;
             std::cout << "  run\tRun a model" << std::endl;
+            std::cout << "  exec\tRun a model on your local machine" << std::endl;
             std::cout << "  pull\tPull a model from registry" << std::endl;
             std::cout << "  help\tHelp about any command" << std::endl;
             std::cout << std::endl;
