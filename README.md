@@ -118,7 +118,7 @@ Flags:
   -h, --help	Help for phoenix-cli
   -v, --version	Show version information
 
-Use "phoenix-cli [command] --help" for more information about a command.
+Use "phoenix [command] --help" for more information about a command.
 ```
 
 PhoenixCLI tested on:

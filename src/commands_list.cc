@@ -22,8 +22,8 @@ void show_commands(int argc, char **argv) {
             std::cout << "PhoenixCLI is a large language model runner" << std::endl;
             std::cout << std::endl;
             std::cout << "Usage:" << std::endl;
-            std::cout << "phoenix-cli [flags]" << std::endl;
-            std::cout << "phoenix-cli [command]" << std::endl;
+            std::cout << "phoenix [flags]" << std::endl;
+            std::cout << "phoenix [command]" << std::endl;
             std::cout << std::endl;
             std::cout << "Available Commands:" << std::endl;
             std::cout << "  list\tList models" << std::endl;
@@ -32,10 +32,10 @@ void show_commands(int argc, char **argv) {
             std::cout << "  help\tHelp about any command" << std::endl;
             std::cout << std::endl;
             std::cout << "Flags:" << std::endl;
-            std::cout << "  -h, --help\tHelp for phoenix-cli" << std::endl;
+            std::cout << "  -h, --help\tHelp for phoenix" << std::endl;
             std::cout << "  -v, --version\tShow version information" << std::endl;
             std::cout << std::endl;
-            std::cout << "Use \"phoenix-cli [command] --help\" for more information about a command." << std::endl;
+            std::cout << "Use \"phoenix [command] --help\" for more information about a command." << std::endl;
             return;
         } else if (arg == "run") {
 
