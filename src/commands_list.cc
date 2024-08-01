@@ -99,6 +99,19 @@ void show_commands(int argc, char **argv) {
                 std::cout << "  --remote\tList of phoenix LLMs" << std::endl;
             }
             return;
+        } else if (arg == "exec") {
+
+            if (i + 1 < argc) {
+                if (std::strcmp(argv[i + 1], "--help") == 0) {
+                std::cout << "Run llm on your local machine" << std::endl;
+                std::cout << std::endl;
+                std::cout << "Usage: " << std::endl;
+                std::cout << "  ./phoenix exec /path/to/model.gguf" << std::endl;
+                return;
+                }
+                run_command(argv[i+1]);
+                return;
+            }
         }
     }
 //        run_command(model_path);
