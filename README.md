@@ -100,7 +100,7 @@ Current version is 0.0.3
 ```
 5. Phoenix help:
 ```sh
-./bin/phoenix --help
+./bin/phoenix help
 
 PhoenixCLI is a large language model runner
 
@@ -111,6 +111,7 @@ phoenix [command]
 Available Commands:
   list	List models
   run	Run a model
+  exec	Run a model on your local machine
   pull	Pull a model from registry
   help	Help about any command
 
