@@ -105,8 +105,8 @@ Current version is 0.0.3
 PhoenixCLI is a large language model runner
 
 Usage:
-phoenix-cli [flags]
-phoenix-cli [command]
+phoenix [flags]
+phoenix [command]
 
 Available Commands:
   list	List models
@@ -115,7 +115,7 @@ Available Commands:
   help	Help about any command
 
 Flags:
-  -h, --help	Help for phoenix-cli
+  -h, --help	Help for phoenix
   -v, --version	Show version information
 
 Use "phoenix [command] --help" for more information about a command.
