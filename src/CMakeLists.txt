@@ -19,6 +19,7 @@ set(LIBRARY_SOURCES
         "models_list.cc"
         "download_model.cc"
         "chat.cc"
+        "chat_manager.cc"
         "directory_manager.cc")
 
 
@@ -30,6 +31,7 @@ set(LIBRARY_HEADERS
         "parse_json.h"
         "utils.h"
         "directory_manager.h"
+        "chat_manager.h"
         "${PROJECT_SOURCE_DIR}/phoenix/llmodel.h")
 
 set(LIBRARY_INCLUDES
@@ -56,6 +58,7 @@ find_package(CURL REQUIRED)
 if (APPLE)
         target_link_libraries(${LIBRARY_NAME} PUBLIC
         spdlog::spdlog
+        nlohmann_json::nlohmann_json
         CURL::libcurl
         llmodel
         llamamodel-mainline-cpu
@@ -67,6 +70,7 @@ elseif(WIN32)
 
         target_link_libraries(${LIBRARY_NAME} PUBLIC
                 spdlog::spdlog
+                nlohmann_json::nlohmann_json
                 CURL::libcurl
                 llmodel
                 llama-mainline-kompute
