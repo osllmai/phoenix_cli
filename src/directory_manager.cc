@@ -121,7 +121,7 @@ std::vector<std::string> DirectoryManager::local_models() {
 }
 
 bool DirectoryManager::create_chats_directory() {
-    std::string directory_name = "chats";
+    std::string directory_name = get_app_home_path() + "/" + "chats";
     try {
         if (fs::create_directory(directory_name)) {
             return true;
