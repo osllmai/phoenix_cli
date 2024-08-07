@@ -19,6 +19,11 @@ namespace fs = std::filesystem;
 
 void show_commands(int argc, char **argv) {
     DirectoryManager::handle_application_directory();
+    std::string models = "models";
+    DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path(), models);
+    std::string chats = "chats";
+    DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path(), chats);
+
 
     json list_of_models = list_of_models_available();
 
@@ -83,8 +88,6 @@ void show_commands(int argc, char **argv) {
                     std::cerr << "Model URL not found." << std::endl;
                     return;
                 }
-                std::string models = "models";
-                DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path(), models);
                 DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path() + "/" + models,
                                                           model["companyName"].get<std::string>());
                 const std::string model_path =
