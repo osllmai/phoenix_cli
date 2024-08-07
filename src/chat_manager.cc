@@ -88,8 +88,10 @@ bool ChatManager::save_chat_history(const std::string &id, const std::string &pr
     }
 
     // Append the new messages to the existing data
-    existing_data["messages"].push_back({{"role", "user"}, {"content", prompt}});
-    existing_data["messages"].push_back({{"role", "assistant"}, {"content", answer}});
+    existing_data["messages"].push_back({{"role",    "user"},
+                                         {"content", prompt}});
+    existing_data["messages"].push_back({{"role",    "assistant"},
+                                         {"content", answer}});
 
     std::ofstream output_file(file_name);
     if (output_file.is_open()) {
@@ -107,7 +109,7 @@ std::vector<std::string> ChatManager::chat_histories() {
     std::string chat_history_path = DirectoryManager::get_app_home_path() + "/chats/";
     std::vector<std::string> chat_list;
 
-    for (const auto &chat_entry : fs::directory_iterator(chat_history_path)) {
+    for (const auto &chat_entry: fs::directory_iterator(chat_history_path)) {
         if (chat_entry.is_regular_file()) {
             // Ensure the filename does not contain ".config."
             std::string filename = chat_entry.path().filename().string();
@@ -118,4 +120,26 @@ std::vector<std::string> ChatManager::chat_histories() {
     }
 
     return chat_list;
+}
+
+json ChatManager::chat_history_conversation(const std::string &id) {
+    std::string chat_history_path = DirectoryManager::get_app_home_path() + "/chats/";
+
+    for (const auto &chat_entry: fs::directory_iterator(chat_history_path)) {
+        if (chat_entry.is_regular_file() && chat_entry.path().filename() == id) {
+            std::ifstream input_file(chat_entry.path());
+            json existing_data;
+
+            if (input_file.is_open()) {
+                input_file >> existing_data;
+                input_file.close();
+                return existing_data;
+            } else {
+                std::cerr << "Unable to open file: " << chat_entry.path() << std::endl;
+            }
+        }
+    }
+
+    std::cerr << "File not found: " << id << std::endl;
+    return {};
 }
