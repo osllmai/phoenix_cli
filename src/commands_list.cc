@@ -57,11 +57,17 @@ void show_commands(int argc, char **argv) {
                     std::cout << "Run a model" << std::endl;
                     return;
                 }
-                std::string model = argv[i + 1];
+//                std::string model = argv[i + 1];
+                std::string model_name = argv[i + 1];
+                json model = model_data(model_name);
+                const std::string model_path =
+                        DirectoryManager::get_app_home_path() + "/models/" +
+                        model["companyName"].get<std::string>() + "/" + model_name +
+                        ".gguf";
                 std::cout << "You want to run " << model << std::endl;
-                const std::string run_command_model_path = DirectoryManager::find_llm_in_app_home(model);
-                if (!run_command_model_path.empty()) {
-                    run_command(run_command_model_path);
+//                const std::string run_command_model_path = DirectoryManager::find_llm_in_app_home(model);
+                if (!model_path.empty()) {
+                    run_command(model_path);
                 } else {
                     std::cerr << "Model not found in the application directory." << std::endl;
                     return;
