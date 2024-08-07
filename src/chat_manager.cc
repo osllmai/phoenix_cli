@@ -55,7 +55,7 @@ bool ChatManager::create_chat_config_file(const std::string &id, chatParams &par
     std::string json_str = j.dump(4);
 
     // write json file
-    std::ofstream output_file("./chats/" + id + ".config.chat.json");
+    std::ofstream output_file(DirectoryManager::get_app_home_path() + "/chats/" + id + ".config.chat.json");
     if (output_file.is_open()) {
         output_file << json_str;
         output_file.close();
@@ -69,7 +69,7 @@ bool ChatManager::create_chat_config_file(const std::string &id, chatParams &par
 
 
 bool ChatManager::save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer) {
-    std::string file_name = "./chats/" + id + ".chat.json";
+    std::string file_name = DirectoryManager::get_app_home_path() + "/chats/" + id + ".chat.json";
 
     std::ifstream input_file(file_name);
     json existing_data;
