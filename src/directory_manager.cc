@@ -105,10 +105,15 @@ std::string DirectoryManager::find_llm_in_app_home(const std::string &filename) 
 
 std::vector<std::string> DirectoryManager::local_models() {
     std::vector<std::string> models{};
+    std::string models_path = get_app_home_path() + "/models/";
 
-    for (const auto &entry: fs::directory_iterator(get_app_home_path())) {
-        if (entry.is_regular_file()) {
-            models.push_back(entry.path().filename().string());
+    for (const auto &company_entry : fs::directory_iterator(models_path)) {
+        if (company_entry.is_directory()) {
+            for (const auto &model_entry : fs::directory_iterator(company_entry.path())) {
+                if (model_entry.is_regular_file()) {
+                    models.push_back(model_entry.path().filename().string());
+                }
+            }
         }
     }
 
