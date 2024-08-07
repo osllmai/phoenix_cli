@@ -109,11 +109,12 @@ phoenix [flags]
 phoenix [command]
 
 Available Commands:
-  list	List models
-  run	Run a model
-  exec	Run a model on your local machine
-  pull	Pull a model from registry
-  help	Help about any command
+  list		List models
+  run		Run a model
+  exec		Run a model on your local machine
+  pull		Pull a model from registry
+  history	List of chats
+  help		Help about any command
 
 Flags:
   -h, --help	Help for phoenix
