@@ -19,9 +19,13 @@ public:
 
     static std::string get_app_home_path();
 
-    static std::string find_llm_in_app_home(const std::string& filename);
+    static std::string find_llm_in_app_home(const std::string &filename);
 
     static std::vector<std::string> local_models();
+
+    static bool create_chats_directory();
+
+    static bool create_custom_directory(const std::string &path, const std::string &directory_name);
 };
 
 

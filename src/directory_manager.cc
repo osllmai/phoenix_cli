@@ -3,11 +3,16 @@
 //
 
 #include "directory_manager.h"
+#include "models_list.h"
 
 #include <iostream>
 #include <cstdlib>
 #include <sys/stat.h>
 #include <string>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
@@ -71,6 +76,15 @@ std::string DirectoryManager::get_app_home_path() {
 
 
 std::string DirectoryManager::find_llm_in_app_home(const std::string &filename) {
+    json models_list = list_of_models_available();
+    if (!models_list.contains(filename)) {
+        std::cerr << "Model not found" << std::endl;
+        return "";
+    }
+
+    std::string model_company = models_list[filename]["companyName"].get<std::string>();
+    std::string path = get_app_home_path() + "/models/" + model_company + "/";
+
     std::string ext = "gguf";
     if (ext.front() != '.') {
         ext = '.' + ext;
@@ -78,7 +92,7 @@ std::string DirectoryManager::find_llm_in_app_home(const std::string &filename) 
 
     std::string full_filename = filename + ext;
 
-    for (const auto &entry: fs::directory_iterator(get_app_home_path())) {
+    for (const auto &entry: fs::directory_iterator(path)) {
         if (entry.is_regular_file() && entry.path().filename() == full_filename) {
             return entry.path().string();
         }
@@ -99,4 +113,32 @@ std::vector<std::string> DirectoryManager::local_models() {
     }
 
     return models;
+}
+
+bool DirectoryManager::create_chats_directory() {
+    std::string directory_name = "chats";
+    try {
+        if (fs::create_directory(directory_name)) {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (const fs::filesystem_error &e) {
+        std::cerr << "Error creating directory: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+bool DirectoryManager::create_custom_directory(const std::string &path, const std::string &directory_name) {
+    std::string directory = path + "/" + directory_name;
+    try {
+        if (fs::create_directory(directory)) {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (const fs::filesystem_error &e) {
+        std::cerr << "Error creating directory: " << e.what() << std::endl;
+        return false;
+    }
 }
