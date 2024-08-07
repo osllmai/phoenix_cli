@@ -36,6 +36,14 @@ else ()
     message("Logging is deactive")
 endif ()
 
+FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+        GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 # cmake_minimum_required (VERSION 3.2)
 
 if (APPLE)
