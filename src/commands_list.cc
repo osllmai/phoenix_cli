@@ -2,6 +2,7 @@
 #include "models_list.h"
 #include "download_model.h"
 #include "directory_manager.h"
+#include "chat_manager.h"
 #include <nlohmann/json.hpp>
 
 #include <chat.cc>
@@ -30,11 +31,12 @@ void show_commands(int argc, char **argv) {
             std::cout << "phoenix [command]" << std::endl;
             std::cout << std::endl;
             std::cout << "Available Commands:" << std::endl;
-            std::cout << "  list\tList models" << std::endl;
-            std::cout << "  run\tRun a model" << std::endl;
-            std::cout << "  exec\tRun a model on your local machine" << std::endl;
-            std::cout << "  pull\tPull a model from registry" << std::endl;
-            std::cout << "  help\tHelp about any command" << std::endl;
+            std::cout << "  list\t\tList models" << std::endl;
+            std::cout << "  run\t\tRun a model" << std::endl;
+            std::cout << "  exec\t\tRun a model on your local machine" << std::endl;
+            std::cout << "  pull\t\tPull a model from registry" << std::endl;
+            std::cout << "  history\tList of chats" << std::endl;
+            std::cout << "  help\t\tHelp about any command" << std::endl;
             std::cout << std::endl;
             std::cout << "Flags:" << std::endl;
             std::cout << "  -h, --help\tHelp for phoenix" << std::endl;
@@ -104,13 +106,13 @@ void show_commands(int argc, char **argv) {
                 if (std::strcmp(argv[i + 1], "--local") == 0) {
                     std::cout << "List models which downloaded" << std::endl;
                     std::cout << "----------------------------" << std::endl;
-                    for (const auto &model : DirectoryManager::local_models()) {
+                    for (const auto &model: DirectoryManager::local_models()) {
                         std::cout << model << std::endl;
                     }
                 } else if (std::strcmp(argv[i + 1], "--remote") == 0) {
                     std::cout << "List models which you can download" << std::endl;
                     std::cout << "----------------------------" << std::endl;
-                    for (const auto &[key, value] : list_of_models.items()) {
+                    for (const auto &[key, value]: list_of_models.items()) {
                         std::cout << key << std::endl;
                     }
                 }
@@ -134,6 +136,23 @@ void show_commands(int argc, char **argv) {
                 run_command(argv[i + 1]);
                 return;
             }
+        } else if (arg == "history") {
+            if (i + i < argc) {
+                if (std::strcmp(argv[i + i], "--help") == 0) {
+                    std::cout << "All chat conversations generated in your home" << std::endl;
+                    std::cout << "Usage:" << std::endl;
+                    std::cout << "  ./phoenix history" << std::endl;
+                    return;
+                }
+            }
+            std::cout << "List of your chats:" << std::endl;
+            std::cout << "----------------------------" << std::endl;
+            std::vector<std::string> history = ChatManager::chat_histories();
+
+            for (const auto &chat : history) {
+                std::cout << chat << std::endl;
+            }
+            return;
         }
     }
 
