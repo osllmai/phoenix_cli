@@ -8,8 +8,12 @@
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include <vector>
+#include <filesystem>
 
 using json = nlohmann::json;
+
+namespace fs = std::filesystem;
 
 std::string ChatManager::generate_unique_id() {
     std::random_device rd;
@@ -96,5 +100,22 @@ bool ChatManager::save_chat_history(const std::string &id, const std::string &pr
         return false;
     }
     return true;
+}
 
+
+std::vector<std::string> ChatManager::chat_histories() {
+    std::string chat_history_path = DirectoryManager::get_app_home_path() + "/chats/";
+    std::vector<std::string> chat_list;
+
+    for (const auto &chat_entry : fs::directory_iterator(chat_history_path)) {
+        if (chat_entry.is_regular_file()) {
+            // Ensure the filename does not contain ".config."
+            std::string filename = chat_entry.path().filename().string();
+            if (filename.find(".config.") == std::string::npos) {
+                chat_list.push_back(filename);
+            }
+        }
+    }
+
+    return chat_list;
 }

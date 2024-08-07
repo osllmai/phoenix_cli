@@ -8,6 +8,7 @@
 #include "header.h"
 
 #include <string>
+#include <vector>
 
 class ChatManager {
 public:
@@ -17,6 +18,7 @@ public:
 
     static bool save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer);
 
+    static std::vector<std::string> chat_histories();
 
 };
 
