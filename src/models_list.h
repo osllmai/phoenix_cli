@@ -1,8 +1,13 @@
 #pragma once
+#include <nlohmann/json.hpp>
 
 #include <string>
 #include <map>
 
-std::map<std::string, std::string> list_of_models_available();
+using json = nlohmann::json;
+
+json list_of_models_available();
 
 std::string get_url_llm_download(const std::string &model_name);
+
+json model_data(const std::string &model_name);
