@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 #include <filesystem>
+#include <cstdlib>
+
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -142,6 +144,19 @@ void show_commands(int argc, char **argv) {
                     std::cout << "All chat conversations generated in your home" << std::endl;
                     std::cout << "Usage:" << std::endl;
                     std::cout << "  ./phoenix history" << std::endl;
+                    std::cout << std::endl;
+                    std::cout << "To open history enter chat ID. e.g:" << std::endl;
+                    std::cout << "  ./phoenix history [ID.chat.json]" << std::endl;
+                    return;
+                } else {
+                    std::string chat_id = argv[i + 1];
+                    json chat_history = ChatManager::chat_history_conversation(chat_id);
+
+                    if (!chat_history.empty()) {
+                        std::cout << chat_history.dump(4) << std::endl;
+                    } else {
+                        std::cout << "No chat history found for ID: " << chat_id << std::endl;
+                    }
                     return;
                 }
             }
@@ -149,12 +164,19 @@ void show_commands(int argc, char **argv) {
             std::cout << "----------------------------" << std::endl;
             std::vector<std::string> history = ChatManager::chat_histories();
 
-            for (const auto &chat : history) {
+            for (const auto &chat: history) {
                 std::cout << chat << std::endl;
             }
             return;
         }
     }
+
+    /*int result = system("python3 src/script.py");
+    if (result == -1) {
+        std::cerr << "Error executing the script" << std::endl;
+    } else {
+        std::cout << "Script executed successfully" << std::endl;
+    } */
 
     std::cout << "Unknown command. Use --help for usage information." << std::endl;
 }
