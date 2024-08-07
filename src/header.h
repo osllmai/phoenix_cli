@@ -114,7 +114,7 @@ struct ConsoleState {
     ConsoleColor color = DEFAULT;
 };
 
-std::string APPNAME = "phoenix-cli";
+const std::string APPNAME = "phoenix-cli";
 
 //utils.h functions
 void set_console_color(ConsoleState &con_st, ConsoleColor color);
