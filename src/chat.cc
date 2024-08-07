@@ -2,15 +2,18 @@
 #include "llmodel.h"
 #include "utils.h"
 #include "parse_json.h"
+#include "chat_manager.h"
+
+#include <string>
 
 //////////////////////////////////////////////////////////////////////////
 ////////////                    ANIMATION                     ////////////
 //////////////////////////////////////////////////////////////////////////
 
-std::atomic<bool> stop_display{ false };
+std::atomic<bool> stop_display{false};
 
 void display_frames() {
-    const char* frames[] = { ".", ":", "'", ":" };
+    const char *frames[] = {".", ":", "'", ":"};
     int frame_index = 0;
     ConsoleState con_st;
     con_st.use_color = true;
@@ -55,7 +58,7 @@ void display_loading() {
 //////////////////////////////////////////////////////////////////////////
 
 
-std::string get_input(ConsoleState& con_st, std::string& input, chatParams& params) {
+std::string get_input(ConsoleState &con_st, std::string &input, chatParams &params) {
     set_console_color(con_st, USER_INPUT);
 
     std::cout << "\n> ";
@@ -77,7 +80,7 @@ std::string answer = "";
 //////////////////////////////////////////////////////////////////////////
 
 
-int run_command(const std::string& model_path) {
+int run_command(const std::string &model_path) {
     ConsoleState con_st;
     con_st.use_color = true;
     set_console_color(con_st, DEFAULT);
@@ -129,7 +132,7 @@ int run_command(const std::string& model_path) {
     LLModel::PromptContext prompt_context;
     prompt_context.n_ctx = 2048;
     int ngl = 100;
-    LLModel* model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
+    LLModel *model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
     std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
 
 #if(WIN32)
@@ -156,9 +159,12 @@ int run_command(const std::string& model_path) {
     std::future<void> future;
     stop_display = true;
 
-    if (params.use_animation) { stop_display = false; future = std::async(std::launch::async, display_loading); }
+    if (params.use_animation) {
+        stop_display = false;
+        future = std::async(std::launch::async, display_loading);
+    }
 
-    auto check_model = model->loadModel(model_path, prompt_context.n_ctx , ngl);
+    auto check_model = model->loadModel(model_path, prompt_context.n_ctx, ngl);
     if (check_model == false) {
         if (params.use_animation) {
             stop_display = true;
@@ -170,8 +176,7 @@ int run_command(const std::string& model_path) {
         std::cout << "Press any key to exit..." << std::endl;
         std::cin.get();
         return 0;
-    }
-    else {
+    } else {
         if (params.use_animation) {
             stop_display = true;
             future.wait();
@@ -269,8 +274,10 @@ int run_command(const std::string& model_path) {
 
 
     auto response_callback = [](int32_t token_id, const std::string responsechars_str) {
-        const char* responsechars = responsechars_str.c_str();
+        const char *responsechars = responsechars_str.c_str();
 
+//        std::cout << "( - " << responsechars_str.c_str() << " - )" << std::endl;
+//        std::cout <<  responsechars_str.c_str();
 
         if (!(responsechars == nullptr || responsechars[0] == '\0')) {
             // stop the animation, printing response
@@ -301,60 +308,147 @@ int run_command(const std::string& model_path) {
     model->setThreadCount(8);
     std::string input = "";
 
-
-
-
     //main chat loop.
     if (!params.no_interactive && !sighup_received) {
         input = get_input(con_st, input, params);
         //if (input == "")input = get_input(con_st, input, params);
 
+//        std::cout << "---------------First prompt----------------" << std::endl;
+//        std::cout << input.c_str() << std::endl;
+//        std::cout << "---------------------------------" << std::endl;
+//        std::cout << "generate json config" << std::endl;
+        std::string unique_identifier = ChatManager::generate_unique_id();
+        ChatManager::create_chat_config_file(unique_identifier, params);
+
         //Interactive mode. We have a prompt.
         if (params.prompt != "") {
-            if (params.use_animation) { stop_display = false; future = std::async(std::launch::async, display_frames); }
-            if (params.b_token != "") { answer = answer + params.b_token; if (!params.use_animation) { std::cout << params.b_token; } }
-            model->prompt( input , prompt_template,
-                           prompt_callback, response_callback, recalculate_callback,prompt_context , false, nullptr);
-            if (params.e_token != "") { std::cout << params.e_token; answer = answer + params.e_token; }
-            if (params.use_animation) { stop_display = true; future.wait(); stop_display = false; }
-            if (params.save_log != "") { save_chat_log(params.save_log, (params.prompt + " " + input + params.default_footer).c_str(), answer.c_str()); }
-
-            //Interactive mode. Else get prompt from input.
-        }
-        else {
-            if (params.use_animation) { stop_display = false; future = std::async(std::launch::async, display_frames); }
-            if (params.b_token != "") { answer = answer + params.b_token; if (!params.use_animation) { std::cout << params.b_token; } }
+            if (params.use_animation) {
+                stop_display = false;
+                future = std::async(std::launch::async, display_frames);
+            }
+            if (params.b_token != "") {
+                answer = answer + params.b_token;
+                if (!params.use_animation) { std::cout << params.b_token; }
+            }
             model->prompt(input, prompt_template,
                           prompt_callback, response_callback, recalculate_callback, prompt_context, false, nullptr);
-            if (params.e_token != "") { std::cout << params.e_token; answer = answer + params.e_token; }
-            if (params.use_animation) { stop_display = true; future.wait(); stop_display = false; }
-            if (params.save_log != "") { save_chat_log(params.save_log, (params.default_prefix + params.default_header + input + params.default_footer).c_str(), answer.c_str()); }
+
+            if (params.e_token != "") {
+                std::cout << params.e_token;
+                answer = answer + params.e_token;
+            }
+            if (params.use_animation) {
+                stop_display = true;
+                future.wait();
+                stop_display = false;
+            }
+            if (params.save_log != "") {
+                save_chat_log(params.save_log, (params.prompt + " " + input + params.default_footer).c_str(),
+                              answer.c_str());
+            }
+
+            //Interactive mode. Else get prompt from input.
+        } else {
+            if (params.use_animation) {
+                stop_display = false;
+                future = std::async(std::launch::async, display_frames);
+            }
+            if (params.b_token != "") {
+                answer = answer + params.b_token;
+                if (!params.use_animation) { std::cout << params.b_token; }
+            }
+            model->prompt(input, prompt_template,
+                          prompt_callback, response_callback, recalculate_callback, prompt_context, false, nullptr);
+
+
+            if (params.e_token != "") {
+                std::cout << params.e_token;
+                answer = answer + params.e_token;
+            }
+//            std::cout << "---------------First answer----------------" << std::endl;
+//            std::cout << answer.c_str() << std::endl;
+//            std::cout << "---------------------------------" << std::endl;
+            ChatManager::save_chat_history(unique_identifier, input.c_str(), answer.c_str());
+//            std::cout << "---------------------------------" << std::endl;
+
+            if (params.use_animation) {
+                stop_display = true;
+                future.wait();
+                stop_display = false;
+            }
+            if (params.save_log != "") {
+                save_chat_log(params.save_log, (params.default_prefix + params.default_header + input +
+                                                params.default_footer).c_str(), answer.c_str());
+            }
         }
         //Interactive and continuous mode. Get prompt from input.
+
+//        std::cout << "^^^^^^^^^^ answer ^^^^^^^^^^^^" << std::endl;
+//        std::cout << answer.c_str() << std::endl;
+//        std::cout << "^^^^^^^^^^ answer ^^^^^^^^^^^^" << std::endl;
+
 
         while (!params.run_once && !sighup_received) {
             answer = ""; //New prompt. We stored previous answer in memory so clear it.
             input = get_input(con_st, input, params);
-            if (params.use_animation) { stop_display = false; future = std::async(std::launch::async, display_frames); }
-            if (params.b_token != "") { answer = answer + params.b_token; if (!params.use_animation) { std::cout << params.b_token; } }
+//            std::cout << "************Interactive prompt*********" << std::endl;
+//            std::cout << input.c_str() << std::endl;
+//            std::cout << "*********************" << std::endl;
+            if (params.use_animation) {
+                stop_display = false;
+                future = std::async(std::launch::async, display_frames);
+            }
+            if (params.b_token != "") {
+                answer = answer + params.b_token;
+                if (!params.use_animation) { std::cout << params.b_token; }
+            }
             model->prompt(input, prompt_template,
                           prompt_callback, response_callback, recalculate_callback, prompt_context, false, nullptr);
-            if (params.e_token != "") { std::cout << params.e_token; answer = answer + params.e_token; }
-            if (params.use_animation) { stop_display = true; future.wait(); stop_display = false; }
-            if (params.save_log != "") { save_chat_log(params.save_log, (params.default_prefix + params.default_header + input + params.default_footer).c_str(), answer.c_str()); }
+            if (params.e_token != "") {
+                std::cout << params.e_token;
+                answer = answer + params.e_token;
+            }
+//            std::cout << "************Interactive answer*********" << std::endl;
+//            std::cout << answer.c_str() << std::endl;
+//            std::cout << "*********************" << std::endl;
+            ChatManager::save_chat_history(unique_identifier, input.c_str(), answer.c_str());
+//            std::cout << "*********************" << std::endl;
+            if (params.use_animation) {
+                stop_display = true;
+                future.wait();
+                stop_display = false;
+            }
+            if (params.save_log != "") {
+                save_chat_log(params.save_log, (params.default_prefix + params.default_header + input +
+                                                params.default_footer).c_str(), answer.c_str());
+            }
 
         }
 
         //No-interactive mode. Get the answer once from prompt and print it.
-    }
-    else {
-        if (params.use_animation) { stop_display = false; future = std::async(std::launch::async, display_frames); }
-        if (params.b_token != "") { answer = answer + params.b_token; if (!params.use_animation) { std::cout << params.b_token; } }
+    } else {
+        if (params.use_animation) {
+            stop_display = false;
+            future = std::async(std::launch::async, display_frames);
+        }
+        if (params.b_token != "") {
+            answer = answer + params.b_token;
+            if (!params.use_animation) { std::cout << params.b_token; }
+        }
         model->prompt(input, prompt_template,
                       prompt_callback, response_callback, recalculate_callback, prompt_context, false, nullptr);
-        if (params.e_token != "") { std::cout << params.e_token; answer = answer + params.e_token; }
-        if (params.use_animation) { stop_display = true; future.wait(); stop_display = false; }
-        if (params.save_log != "") { save_chat_log(params.save_log, (params.prompt + params.default_footer).c_str(), answer.c_str()); }
+        if (params.e_token != "") {
+            std::cout << params.e_token;
+            answer = answer + params.e_token;
+        }
+        if (params.use_animation) {
+            stop_display = true;
+            future.wait();
+            stop_display = false;
+        }
+        if (params.save_log != "") {
+            save_chat_log(params.save_log, (params.prompt + params.default_footer).c_str(), answer.c_str());
+        }
         std::cout << std::endl;
     }
 
