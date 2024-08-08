@@ -26,6 +26,8 @@ public:
     static bool create_chats_directory();
 
     static bool create_custom_directory(const std::string &path, const std::string &directory_name);
+
+    static bool delete_model(const std::string &model_name);
 };
 
 

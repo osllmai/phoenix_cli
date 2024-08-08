@@ -107,9 +107,9 @@ std::vector<std::string> DirectoryManager::local_models() {
     std::vector<std::string> models{};
     std::string models_path = get_app_home_path() + "/models/";
 
-    for (const auto &company_entry : fs::directory_iterator(models_path)) {
+    for (const auto &company_entry: fs::directory_iterator(models_path)) {
         if (company_entry.is_directory()) {
-            for (const auto &model_entry : fs::directory_iterator(company_entry.path())) {
+            for (const auto &model_entry: fs::directory_iterator(company_entry.path())) {
                 if (model_entry.is_regular_file()) {
                     models.push_back(model_entry.path().filename().string());
                 }
@@ -146,4 +146,23 @@ bool DirectoryManager::create_custom_directory(const std::string &path, const st
         std::cerr << "Error creating directory: " << e.what() << std::endl;
         return false;
     }
+}
+
+bool DirectoryManager::delete_model(const std::string &model_name) {
+    try {
+        json model = model_data(model_name);
+        std::string company_name = model["companyName"].get<std::string>();
+        std::string models_path = get_app_home_path() +  "/models/" + company_name;
+
+        for (const auto &model_entry : fs::directory_iterator(models_path)) {
+            if (model_entry.is_regular_file()) {
+                fs::remove(model_entry.path());
+                return true;
+            }
+        }
+    } catch (const std::exception &e) {
+//        std::cerr << model_name << " is not downloaded" << std::endl;
+    }
+
+    return false;
 }
