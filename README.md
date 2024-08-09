@@ -1,7 +1,7 @@
 <p align="center">
 
 <div style="position: relative; width: 100%; text-align: center;">
-    <h1>phoenix_cli</h1>
+    <h1>Phoenix_cli</h1>
     <a href="https://github.com/osllmai/phoenix_cli">
         <img src="https://readme-typing-svg.demolab.com?font=Georgia&size=16&duration=3000&pause=500&multiline=true&width=700&height=100&lines=Phoenix_cli;LLM+Runner+for+Local+Execution+%7C+Open+Source;Copyright+©️+OSLLAM.ai" alt="Typing SVG" style="margin-top: 20px;"/>
     </a>
