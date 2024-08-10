@@ -135,23 +135,25 @@ Current version is 0.0.3
 5. Phoenix help:
 
 ```sh
-Phoenix_cli is a large language model runner developed by osllm.ai. It is open-source software that you can use freely to run and manage large language models.
+PhoenixCLI is a large language model runner developed by osllm.ai. It is open-source software that you can use freely to run and manage large language models.
 
 Usage:
-  phoenix [flags]
-  phoenix [command]
+phoenix [flags]
+phoenix [command]
 
 Available Commands:
-  list       Displays a list of all available models that you can run or manage
-  run        Executes a model based on your specified input
-  exec       Runs a model directly on your local machine
-  pull       Retrieves a model from the registry and stores it locally
-  history    Shows a list of your previous chats
-  help       Provides detailed information and guidance about any specific command
+  serve		Start the phoenix server
+  list		Displays a list of all available models that you can run or manage
+  run		Executes a model based on your specified input
+  exec		Runs a model directly on your local machine
+  pull		Retrieves a model from the registry and stores it locally
+  rm		Remove a model from your local storage
+  history	Shows a list of your previous chats
+  help		Provides detailed information and guidance about any specific command
 
 Flags:
-  -h, --help      Displays help information for the phoenix command
-  -v, --version   Outputs the current version of Phoenix_cli
+  -h, --help	Displays help information for the phoenix command
+  -v, --version	Outputs the current version of PhoenixCLI
 
 Use "phoenix [command] --help" for more information about a command.
 ```
