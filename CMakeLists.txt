@@ -16,6 +16,7 @@ option(LOCAL_DEBUG "Use for logging" ON)
 
 
 set(LIBRARY_NAME Lib)
+#set(NETWORK_LIBRARY_NAME PhoenixWebServer)
 set(EXECUTABLE_NAME phoenix)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
@@ -157,5 +158,6 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 
 add_subdirectory(phoenix)
+#add_subdirectory(api)
 add_subdirectory(src)
 add_subdirectory(app)
