@@ -4,6 +4,7 @@
 #include "parse_json.h"
 #include "chat_manager.h"
 #include "web_server.h"
+#include "database_manager.h"
 
 #include <string>
 #include <atomic>
@@ -223,7 +224,13 @@ int run_command(const std::string &model_path) {
                                             params.default_footer).c_str(), answer.c_str());
         }
 
-        ChatManager::save_chat_history(unique_identifier, input.c_str(), answer.c_str());
+        std::string path = ChatManager::save_chat_history(unique_identifier, input.c_str(), answer.c_str());
+        sqlite3 *db;
+        if (sqlite3_open("./build/bin/phoenix.db", &db) == 0) {
+            DatabaseManager::insert_chat_history(db, unique_identifier, path);
+            sqlite3_close(db);
+        }
+
         answer.clear(); // Clear the answer for the next prompt
     }
 
@@ -248,7 +255,7 @@ std::string chat_with_api(const std::string &model_path, const std::string &prom
     params.model = model_path;
 
     LLModel::PromptContext prompt_context;
-    prompt_context.n_ctx = 2048;
+    prompt_context.n_ctx = 4096;
     int ngl = 100;
     LLModel *model = LLModel::Implementation::construct(model_path, "auto", prompt_context.n_ctx);
     std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
@@ -365,11 +372,19 @@ std::string chat_with_api(const std::string &model_path, const std::string &prom
         stop_display = false;
     }
     if (!params.save_log.empty()) {
-        save_chat_log(params.save_log, (params.default_prefix + params.default_header + prompt +
-                                        params.default_footer).c_str(), answer.c_str());
+        save_chat_log(params.save_log, params.default_prefix + params.default_header + prompt +
+                                       params.default_footer, answer);
     }
 
-    ChatManager::save_chat_history(unique_identifier, prompt.c_str(), answer.c_str());
+    std::string path = ChatManager::save_chat_history(unique_identifier, prompt, answer);
+
+    sqlite3 *db;
+    if (sqlite3_open("phoenix.db", &db) == SQLITE_OK) {
+        DatabaseManager::insert_chat_history(db, unique_identifier, path);
+        sqlite3_close(db);
+    } else {
+        std::cerr << "error in open db" << std::endl;
+    }
     std::string response = answer;
     answer.clear(); // Clear the answer for the next prompt
 
