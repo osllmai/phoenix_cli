@@ -4,9 +4,12 @@
 #include "directory_manager.h"
 #include "chat_manager.h"
 #include "web_server.h"
+#include "database_manager.h"
 
+#include <boost/beast.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/asio.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -15,20 +18,24 @@
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <filesystem>
 #include <cstdlib>
 #include <thread>
 
-using json = nlohmann::json;
 namespace fs = std::filesystem;
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
+
+using json = nlohmann::json;
 using tcp = net::ip::tcp;
 
 void print_help() {
-    std::cout << "PhoenixCLI is a large language model runner developed by osllm.ai. It is open-source software that you can use freely to run and manage large language models." << std::endl;
+    std::cout
+            << "PhoenixCLI is a large language model runner developed by osllm.ai. It is open-source software that you can use freely to run and manage large language models."
+            << std::endl;
     std::cout << std::endl;
     std::cout << "Usage:" << std::endl;
     std::cout << "phoenix [flags]" << std::endl;
@@ -52,14 +59,20 @@ void print_help() {
 }
 
 void handle_run_command(const std::string &model_name) {
-    json model = model_data(model_name);
-    const std::string model_path = DirectoryManager::get_app_home_path() + "/models/" +
-                                   model["companyName"].get<std::string>() + "/" + model_name + ".gguf";
-    if (!model_path.empty()) {
-        run_command(model_path);
-    } else {
-        std::cerr << "Model not found in the application directory." << std::endl;
+//    json model = model_data(model_name);
+//    const std::string model_path = DirectoryManager::get_app_home_path() + "/models/" +
+//                                   model["companyName"].get<std::string>() + "/" + model_name + ".gguf";
+    sqlite3 *db;
+    if(sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+        std::string model_path = DatabaseManager::get_path_by_model_name(db, model_name);
+        sqlite3_close(db);
+
+        if (!model_path.empty())
+            run_command(model_path);
+        else
+            std::cerr << "Field to find " << model_name << std::endl;
     }
+
 }
 
 void handle_pull_command(const std::string &model_name) {
@@ -77,7 +90,13 @@ void handle_pull_command(const std::string &model_name) {
                                               model["companyName"].get<std::string>());
     const std::string model_path = DirectoryManager::get_app_home_path() + "/models/" +
                                    model["companyName"].get<std::string>() + "/" + model_name + ".gguf";
+    sqlite3 *db;
+
     if (download_model_file(model_url, model_path)) {
+        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+            DatabaseManager::insert_models(db, model_name, model_path);
+            sqlite3_close(db);
+        }
         std::cout << "Model downloaded successfully!" << std::endl;
     } else {
         std::cout << "Failed to complete download model" << std::endl;
@@ -88,9 +107,14 @@ void handle_list_command(const std::string &option) {
     if (option == "--local") {
         std::cout << "List models which downloaded" << std::endl;
         std::cout << "----------------------------" << std::endl;
-        for (const auto &model: DirectoryManager::local_models()) {
-            std::cout << model << std::endl;
+        sqlite3 *db;
+        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+            DatabaseManager::read_models(db);
+            sqlite3_close(db);
         }
+//        for (const auto &model: DirectoryManager::local_models()) {
+//            std::cout << model << std::endl;
+//        }
     } else if (option == "--remote") {
         std::cout << "List models which you can download" << std::endl;
         std::cout << "----------------------------" << std::endl;
@@ -115,12 +139,23 @@ void handle_history_command(const std::string &chat_id) {
     if (chat_id.empty()) {
         std::cout << "List of your chats:" << std::endl;
         std::cout << "----------------------------" << std::endl;
-        std::vector<std::string> history = ChatManager::chat_histories();
-        for (const auto &chat: history) {
-            std::cout << chat << std::endl;
+        sqlite3 *db;
+        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+            DatabaseManager::read_chat_histories(db);
+            sqlite3_close(db);
         }
+//        std::vector<std::string> history = ChatManager::chat_histories();
+//        for (const auto &chat: history) {
+//            std::cout << chat << std::endl;
+//        }
     } else {
-        json chat_history = ChatManager::chat_history_conversation(chat_id);
+        std::string chat_file_path;
+        sqlite3 *db;
+        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+            chat_file_path = DatabaseManager::get_path_by_filename(db, chat_id);
+            sqlite3_close(db);
+        }
+        json chat_history = ChatManager::chat_history_conversation(chat_file_path);
         if (!chat_history.empty()) {
             std::cout << chat_history.dump(4) << std::endl;
         } else {
@@ -132,12 +167,17 @@ void handle_history_command(const std::string &chat_id) {
 void handle_rm_command(const std::string &model_name) {
     if (DirectoryManager::delete_model(model_name)) {
         std::cout << "Model deleted" << std::endl;
+        sqlite3 *db;
+        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+            DatabaseManager::delete_model(db, model_name);
+            sqlite3_close(db);
+        }
     } else {
         std::cout << "Model not found" << std::endl;
     }
 }
 
-std::string handle_request(tcp::socket& socket, beast::flat_buffer& buffer) {
+std::string handle_request(tcp::socket &socket, beast::flat_buffer &buffer) {
     // Read the request
     http::request<http::dynamic_body> req;
     http::read(socket, buffer, req);
@@ -153,30 +193,72 @@ std::string handle_request(tcp::socket& socket, beast::flat_buffer& buffer) {
         // Extract model and prompt from the JSON
         std::string model = pt.get<std::string>("model");
         std::string prompt = pt.get<std::string>("prompt");
+        bool stream = pt.get<bool>("stream");
+
         std::string model_name = "/Users/amir/Workspace/models/Meta-Llama-3-8B-Instruct.Q4_0.gguf";
 
+        if (!stream) {
+            // Call the API with the extracted values
+            std::string api_response = chat_with_api(model_name, prompt);
 
-        // Call the API with the extracted values
-        std::string api_response = chat_with_api(model_name, prompt);
+            // Prepare the JSON response
+            boost::property_tree::ptree response_pt;
+            response_pt.put("response", api_response);
+            std::ostringstream json_response_stream;
+            boost::property_tree::write_json(json_response_stream, response_pt);
+            std::string json_response = json_response_stream.str();
 
-        // Prepare the JSON response
-        boost::property_tree::ptree response_pt;
-        response_pt.put("response", api_response);
-        std::ostringstream json_response_stream;
-        boost::property_tree::write_json(json_response_stream, response_pt);
-        std::string json_response = json_response_stream.str();
+            // Prepare the HTTP response
+            http::response<http::string_body> res{http::status::ok, req.version()};
+            res.set(http::field::server, "Beast");
+            res.set(http::field::content_type, "application/json");
+            res.body() = json_response;
+            res.prepare_payload();
 
-        // Prepare the HTTP response
-        http::response<http::string_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, "Beast");
-        res.set(http::field::content_type, "application/json");
-        res.body() = json_response;
-        res.prepare_payload();
+            // Send the response
+            http::write(socket, res);
 
-        // Send the response
-        http::write(socket, res);
+            return api_response;
+        } else {
+            // Prepare the HTTP response with chunked transfer encoding
+            http::response<http::empty_body> res{http::status::ok, req.version()};
+            res.set(http::field::server, "Beast");
+            res.set(http::field::content_type, "application/json");
+            res.set(http::field::transfer_encoding, "chunked");
 
-        return api_response;
+            // Send the headers
+            http::write(socket, res);
+
+            // Simulate streaming response
+            std::string chunk_data = "{\"chunk\": \"This is a chunk of data\"}";
+            std::string chunk_size = std::to_string(chunk_data.size()) + "\r\n";
+            std::string chunk = chunk_size + chunk_data + "\r\n";
+
+            // Log the chunk being sent
+            std::cout << "Sending chunk: " << chunk << std::endl;
+
+            // Send the chunk
+            net::write(socket, net::buffer(chunk));
+
+            // Simulate additional chunks (if needed)
+            // For demonstration, send another chunk
+            std::string additional_chunk_data = "{\"chunk\": \"This is another chunk of data\"}";
+            std::string additional_chunk_size = std::to_string(additional_chunk_data.size()) + "\r\n";
+            std::string additional_chunk = additional_chunk_size + additional_chunk_data + "\r\n";
+
+            // Log the additional chunk being sent
+            std::cout << "Sending additional chunk: " << additional_chunk << std::endl;
+
+            // Send the additional chunk
+            net::write(socket, net::buffer(additional_chunk));
+
+            // Send the final chunk to indicate the end of the response
+            std::string end_chunk = "0\r\n\r\n";
+            std::cout << "Sending final chunk: " << end_chunk << std::endl;
+            net::write(socket, net::buffer(end_chunk));
+
+            return "Streamed response";
+        }
     } else {
         // Return an error response for invalid requests
         http::response<http::string_body> res{http::status::bad_request, req.version()};
@@ -212,9 +294,7 @@ std::string handle_serv_command() {
             beast::flat_buffer buffer;
 
             // Handle the request
-            std::string api_response = handle_request(socket, buffer);
-
-            std::cout << "AI >>>>>> " << api_response << std::endl;
+            handle_request(socket, buffer);
         }
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
@@ -223,6 +303,7 @@ std::string handle_serv_command() {
 }
 
 void show_commands(int argc, char **argv) {
+    // Directory management
     DirectoryManager::handle_application_directory();
     DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path(), "models");
     DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path(), "chats");
@@ -283,7 +364,7 @@ void show_commands(int argc, char **argv) {
                     std::cout << "  ./phoenix history" << std::endl;
                     std::cout << std::endl;
                     std::cout << "To open history enter chat ID. e.g:" << std::endl;
-                    std::cout << "  ./phoenix history [ID.chat.json]" << std::endl;
+                    std::cout << "  ./phoenix history [ID]" << std::endl;
                     return;
                 }
                 handle_history_command(argv[i + 1]);

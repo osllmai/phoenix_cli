@@ -20,11 +20,11 @@ public:
 
     static bool create_chat_config_file(const std::string &id, chatParams &params);
 
-    static bool save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer);
+    static std::string save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer);
 
     static std::vector<std::string> chat_histories();
 
-    static json chat_history_conversation(const std::string &id);
+    static json chat_history_conversation(const std::string &path);
 
 };
 
