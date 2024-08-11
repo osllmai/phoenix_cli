@@ -1,6 +1,7 @@
 #include "chat_manager.h"
 #include "header.h"
 #include "directory_manager.h"
+#include "database_manager.h"
 
 #include <string>
 #include <set>
@@ -72,7 +73,8 @@ bool ChatManager::create_chat_config_file(const std::string &id, chatParams &par
 }
 
 
-bool ChatManager::save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer) {
+std::string
+ChatManager::save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer) {
     std::string file_name = DirectoryManager::get_app_home_path() + "/chats/" + id + ".chat.json";
 
     std::ifstream input_file(file_name);
@@ -99,9 +101,9 @@ bool ChatManager::save_chat_history(const std::string &id, const std::string &pr
         output_file.close();
     } else {
         std::cerr << "Unable to open json file" << std::endl;
-        return false;
+        return "";
     }
-    return true;
+    return file_name;
 }
 
 
@@ -122,24 +124,23 @@ std::vector<std::string> ChatManager::chat_histories() {
     return chat_list;
 }
 
-json ChatManager::chat_history_conversation(const std::string &id) {
-    std::string chat_history_path = DirectoryManager::get_app_home_path() + "/chats/";
+json ChatManager::chat_history_conversation(const std::string &path) {
+//    std::string chat_history_path = DirectoryManager::get_app_home_path() + "/chats/";
+//    for (const auto &chat_entry: fs::directory_iterator(path)) {
+//        if (chat_entry.is_regular_file()) {
+    std::ifstream input_file(path);
+    json existing_data;
 
-    for (const auto &chat_entry: fs::directory_iterator(chat_history_path)) {
-        if (chat_entry.is_regular_file() && chat_entry.path().filename() == id) {
-            std::ifstream input_file(chat_entry.path());
-            json existing_data;
-
-            if (input_file.is_open()) {
-                input_file >> existing_data;
-                input_file.close();
-                return existing_data;
-            } else {
-                std::cerr << "Unable to open file: " << chat_entry.path() << std::endl;
-            }
-        }
+    if (input_file.is_open()) {
+        input_file >> existing_data;
+        input_file.close();
+        return existing_data;
+    } else {
+        std::cerr << "Unable to open file: " << path << std::endl;
     }
+//        }
+//    }
 
-    std::cerr << "File not found: " << id << std::endl;
+    std::cerr << "File not found: " << path << std::endl;
     return {};
 }
