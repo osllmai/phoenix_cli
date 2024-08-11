@@ -18,6 +18,7 @@ set(LIBRARY_SOURCES
         "commands_list.cc"
         "download_model.cc"
         "web_server.cc"
+        "database_manager.cc"
 )
 
 set(LIBRARY_HEADERS
@@ -31,6 +32,7 @@ set(LIBRARY_HEADERS
         "directory_manager.h"
         "chat_manager.h"
         "web_server.h"
+        "database_manager.h"
 )
 
 set(LIBRARY_INCLUDES
@@ -42,6 +44,8 @@ set(LIBRARY_INCLUDES
 
 find_package(CURL REQUIRED)
 find_package(Boost 1.70 REQUIRED COMPONENTS system)
+find_package(SQLite3 REQUIRED)
+
 
 
 add_library(${LIBRARY_NAME}
@@ -65,6 +69,7 @@ if (APPLE)
             spdlog::spdlog
             nlohmann_json::nlohmann_json
             CURL::libcurl
+            SQLite::SQLite3
             llmodel
             Boost::system
             llamamodel-mainline-cpu
