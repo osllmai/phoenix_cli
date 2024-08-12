@@ -23,6 +23,11 @@
 #include <filesystem>
 #include <cstdlib>
 #include <thread>
+#include <atomic>
+#include <mutex>
+#include <queue>
+#include <deque>
+
 
 namespace fs = std::filesystem;
 namespace beast = boost::beast;
@@ -63,7 +68,7 @@ void handle_run_command(const std::string &model_name) {
 //    const std::string model_path = DirectoryManager::get_app_home_path() + "/models/" +
 //                                   model["companyName"].get<std::string>() + "/" + model_name + ".gguf";
     sqlite3 *db;
-    if(sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+    if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
         std::string model_path = DatabaseManager::get_path_by_model_name(db, model_name);
         sqlite3_close(db);
 
@@ -177,129 +182,166 @@ void handle_rm_command(const std::string &model_name) {
     }
 }
 
-std::string handle_request(tcp::socket &socket, beast::flat_buffer &buffer) {
-    // Read the request
-    http::request<http::dynamic_body> req;
-    http::read(socket, buffer, req);
 
-    // Check if the request is a POST to /api/generate
-    if (req.method() == http::verb::post && req.target() == "/api/generate") {
-        // Parse the JSON body
-        std::string body = beast::buffers_to_string(req.body().data());
-        std::istringstream json_stream(body);
-        boost::property_tree::ptree pt;
-        boost::property_tree::read_json(json_stream, pt);
+void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buffer) {
+    try {
+        // Read the request
+        http::request<http::dynamic_body> req;
+        http::read(*socket, buffer, req);
 
-        // Extract model and prompt from the JSON
-        std::string model = pt.get<std::string>("model");
-        std::string prompt = pt.get<std::string>("prompt");
-        bool stream = pt.get<bool>("stream");
+        // Set Keep-Alive
+        bool keep_alive = req.keep_alive();
 
-        std::string model_name = "/Users/amir/Workspace/models/Meta-Llama-3-8B-Instruct.Q4_0.gguf";
+        if (req.method() == http::verb::post && req.target() == "/api/generate") {
+            // Parse the JSON body
+            std::string body = beast::buffers_to_string(req.body().data());
+            std::istringstream json_stream(body);
+            boost::property_tree::ptree pt;
+            boost::property_tree::read_json(json_stream, pt);
 
-        if (!stream) {
-            // Call the API with the extracted values
-            std::string api_response = chat_with_api(model_name, prompt);
+            std::string model = pt.get<std::string>("model");
+            std::string prompt = pt.get<std::string>("prompt");
+            bool stream = pt.get<bool>("stream");
 
-            // Prepare the JSON response
-            boost::property_tree::ptree response_pt;
-            response_pt.put("response", api_response);
-            std::ostringstream json_response_stream;
-            boost::property_tree::write_json(json_response_stream, response_pt);
-            std::string json_response = json_response_stream.str();
+            std::string model_name = "/Users/amir/Workspace/models/Meta-Llama-3-8B-Instruct.Q4_0.gguf";
 
-            // Prepare the HTTP response
-            http::response<http::string_body> res{http::status::ok, req.version()};
-            res.set(http::field::server, "Beast");
-            res.set(http::field::content_type, "application/json");
-            res.body() = json_response;
-            res.prepare_payload();
+            if (stream) {
+                // Prepare the HTTP response with chunked transfer encoding
+                http::response<http::empty_body> res{http::status::ok, req.version()};
+                res.set(http::field::server, "Beast");
+                res.set(http::field::content_type, "application/json");
+                res.set(http::field::transfer_encoding, "chunked");
+                res.keep_alive(keep_alive);  // Keep-Alive header
 
-            // Send the response
-            http::write(socket, res);
+                // Send the headers
+                http::serializer<false, http::empty_body> sr{res};
+                http::write_header(*socket, sr);
 
-            return api_response;
+                auto send_chunk = [socket](const std::string& data) {
+                    std::string chunk = data;
+                    std::stringstream ss;
+                    ss << std::hex << chunk.size() << "\r\n" << chunk << "\r\n";
+                    std::string formatted_chunk = ss.str();
+
+                    boost::system::error_code ec;
+                    boost::asio::write(*socket, boost::asio::buffer(formatted_chunk), ec);
+                    if (ec) {
+                        std::cerr << "Error sending chunk: " << ec.message() << std::endl;
+                        return false;
+                    }
+                    return true;
+                };
+
+                auto token_callback = [&send_chunk](const std::string& token) -> bool {
+                    std::string json_chunk = "{\"chunk\": \"" + token + "\"}";
+                    return send_chunk(json_chunk);
+                };
+
+                chat_with_api_stream(model_name, prompt, token_callback);
+
+                // Send the final chunk to indicate the end of the stream
+                send_chunk("[DONE]");
+
+                // Send the terminating chunk
+                boost::system::error_code ec;
+                boost::asio::write(*socket, boost::asio::buffer("0\r\n\r\n"), ec);
+                if (ec) {
+                    std::cerr << "Error sending terminating chunk: " << ec.message() << std::endl;
+                }
+
+            } else {
+                // Non-streaming response
+                std::string api_response = chat_with_api(model_name, prompt);
+
+                boost::property_tree::ptree response_pt;
+                response_pt.put("response", api_response);
+                std::ostringstream json_response_stream;
+                boost::property_tree::write_json(json_response_stream, response_pt);
+                std::string json_response = json_response_stream.str();
+
+                http::response<http::string_body> res{http::status::ok, req.version()};
+                res.set(http::field::server, "Beast");
+                res.set(http::field::content_type, "application/json");
+                res.body() = json_response;
+                res.prepare_payload();
+                res.keep_alive(keep_alive);  // Keep-Alive header
+
+                http::write(*socket, res);
+            }
         } else {
-            // Prepare the HTTP response with chunked transfer encoding
-            http::response<http::empty_body> res{http::status::ok, req.version()};
+            // Return an error response for invalid requests
+            http::response<http::string_body> res{http::status::bad_request, req.version()};
             res.set(http::field::server, "Beast");
             res.set(http::field::content_type, "application/json");
-            res.set(http::field::transfer_encoding, "chunked");
+            res.body() = R"({"error": "Invalid request"})";
+            res.prepare_payload();
+            res.keep_alive(keep_alive);  // Keep-Alive header
 
-            // Send the headers
-            http::write(socket, res);
-
-            // Simulate streaming response
-            std::string chunk_data = "{\"chunk\": \"This is a chunk of data\"}";
-            std::string chunk_size = std::to_string(chunk_data.size()) + "\r\n";
-            std::string chunk = chunk_size + chunk_data + "\r\n";
-
-            // Log the chunk being sent
-            std::cout << "Sending chunk: " << chunk << std::endl;
-
-            // Send the chunk
-            net::write(socket, net::buffer(chunk));
-
-            // Simulate additional chunks (if needed)
-            // For demonstration, send another chunk
-            std::string additional_chunk_data = "{\"chunk\": \"This is another chunk of data\"}";
-            std::string additional_chunk_size = std::to_string(additional_chunk_data.size()) + "\r\n";
-            std::string additional_chunk = additional_chunk_size + additional_chunk_data + "\r\n";
-
-            // Log the additional chunk being sent
-            std::cout << "Sending additional chunk: " << additional_chunk << std::endl;
-
-            // Send the additional chunk
-            net::write(socket, net::buffer(additional_chunk));
-
-            // Send the final chunk to indicate the end of the response
-            std::string end_chunk = "0\r\n\r\n";
-            std::cout << "Sending final chunk: " << end_chunk << std::endl;
-            net::write(socket, net::buffer(end_chunk));
-
-            return "Streamed response";
+            http::write(*socket, res);
         }
-    } else {
-        // Return an error response for invalid requests
-        http::response<http::string_body> res{http::status::bad_request, req.version()};
+
+        if (!keep_alive) {
+            socket->shutdown(tcp::socket::shutdown_send);
+        }
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error handling request: " << e.what() << std::endl;
+        http::response<http::string_body> res{http::status::internal_server_error, 11};
         res.set(http::field::server, "Beast");
         res.set(http::field::content_type, "application/json");
-        res.body() = R"({"error": "Invalid request"})";
+        res.body() = R"({"error": "Internal server error"})";
         res.prepare_payload();
 
-        // Send the response
-        http::write(socket, res);
-
-        return "Invalid request";
+        http::write(*socket, res);
     }
 }
 
 std::string handle_serv_command() {
     try {
-        // Hardcoded address and port
         std::string address = "0.0.0.0";
         unsigned short port = 8080;
 
-        // The io_context is required for all I/O
-        net::io_context ioc{1};
-
-        // The acceptor receives incoming connections
+        net::io_context ioc;
         tcp::acceptor acceptor{ioc, {net::ip::make_address(address), port}};
 
-        for (;;) {
-            tcp::socket socket{ioc};
-            acceptor.accept(socket);
+        std::cout << "Server started on " << address << ":" << port << std::endl;
 
-            // Create a buffer for the request
+        const int num_threads = std::thread::hardware_concurrency();
+        std::vector<std::thread> thread_pool;
+
+        for (int i = 0; i < num_threads; ++i) {
+            thread_pool.emplace_back([&ioc]() {
+                ioc.run();
+            });
+        }
+
+        for (;;) {
+            auto socket = std::make_shared<tcp::socket>(ioc);
+            acceptor.accept(*socket);
+
+            std::cout << "New connection accepted from " << socket->remote_endpoint() << std::endl;
+
             beast::flat_buffer buffer;
 
-            // Handle the request
-            handle_request(socket, buffer);
+            std::thread{[socket, buffer]() mutable {
+                try {
+                    handle_request(socket, std::move(buffer));
+                } catch (const std::exception& e) {
+                    std::cerr << "Error in request handler thread: " << e.what() << std::endl;
+                }
+            }}.detach();
         }
-    } catch (const std::exception &e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+
+        for (auto& thread : thread_pool) {
+            thread.join();
+        }
+
+    } catch (const std::exception& e) {
+        std::cerr << "Server error: " << e.what() << std::endl;
         return "Error: " + std::string(e.what());
     }
+
+    return "Server stopped";
 }
 
 void show_commands(int argc, char **argv) {
@@ -385,7 +427,6 @@ void show_commands(int argc, char **argv) {
                 return;
             }
         } else if (arg == "serve") {
-            std::cout << "Run server on port :11343" << std::endl;
             std::thread serv_thread(handle_serv_command);
             std::string model_name = "/Users/amir/Workspace/models/Meta-Llama-3-8B-Instruct.Q4_0.gguf";
             std::thread run_model_thread(handle_exec_command, model_name);
