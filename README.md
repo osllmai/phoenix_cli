@@ -144,6 +144,7 @@ phoenix [command]
 Available Commands:
   serve		Start the phoenix server
   list		Displays a list of all available models that you can run or manage
+  show		Show full information about a model
   run		Executes a model based on your specified input
   exec		Runs a model directly on your local machine
   pull		Retrieves a model from the registry and stores it locally
