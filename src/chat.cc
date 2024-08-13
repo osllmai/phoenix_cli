@@ -95,7 +95,7 @@ std::string answer = "";
 ////////////                /CHAT FUNCTIONS                   ////////////
 //////////////////////////////////////////////////////////////////////////
 
-int run_command(const std::string &model_path) {
+int run_command(const std::string &prompt_template, const std::string &model_path) {
     ConsoleState con_st;
     con_st.use_color = true;
     set_console_color(con_st, DEFAULT);
@@ -114,7 +114,8 @@ int run_command(const std::string &model_path) {
     prompt_context.n_ctx = 2048;
     int ngl = 100;
     LLModel *model = LLModel::Implementation::construct(model_path, "auto", prompt_context.n_ctx);
-    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
+//    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
+
 
 #if(WIN32)
     if (params.backend == "cuda") {
@@ -252,7 +253,7 @@ int run_command(const std::string &model_path) {
 }
 
 
-std::string chat_with_api(const std::string &model_path, const std::string &prompt) {
+std::string chat_with_api(const std::string &prompt_template, const std::string &model_path, const std::string &prompt) {
     ConsoleState con_st;
     con_st.use_color = true;
     set_console_color(con_st, DEFAULT);
@@ -271,7 +272,7 @@ std::string chat_with_api(const std::string &model_path, const std::string &prom
     prompt_context.n_ctx = 4096;
     int ngl = 100;
     LLModel *model = LLModel::Implementation::construct(model_path, "auto", prompt_context.n_ctx);
-    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
+//    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
 
 #if(WIN32)
     if (params.backend == "cuda") {
@@ -408,7 +409,7 @@ std::string chat_with_api(const std::string &model_path, const std::string &prom
 }
 
 
-std::string chat_with_api_stream(const std::string &model_path, const std::string &prompt, std::function<void(const std::string&)> token_callback) {
+std::string chat_with_api_stream(const std::string &prompt_template, const std::string &model_path, const std::string &prompt, std::function<void(const std::string&)> token_callback) {
     ConsoleState con_st;
     con_st.use_color = true;
     set_console_color(con_st, DEFAULT);
@@ -427,7 +428,7 @@ std::string chat_with_api_stream(const std::string &model_path, const std::strin
     prompt_context.n_ctx = 4096;
     int ngl = 100;
     LLModel *model = LLModel::Implementation::construct(model_path, "auto", prompt_context.n_ctx);
-    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
+//    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
 
 #if(WIN32)
     if (params.backend == "cuda") {
