@@ -1,33 +1,32 @@
 #include "commands_list.h"
-#include "models_list.h"
-#include "download_model.h"
-#include "directory_manager.h"
 #include "chat_manager.h"
-#include "web_server.h"
 #include "database_manager.h"
+#include "directory_manager.h"
+#include "download_model.h"
+#include "models_list.h"
+#include "web_server.h"
 
+#include <atomic>
+#include <boost/asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/beast.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
-#include <boost/asio.hpp>
 #include <boost/beast/version.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <chat.cc>
-#include <nlohmann/json.hpp>
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <filesystem>
 #include <cstdlib>
-#include <thread>
-#include <atomic>
-#include <mutex>
-#include <queue>
 #include <deque>
-
+#include <filesystem>
+#include <iostream>
+#include <mutex>
+#include <nlohmann/json.hpp>
+#include <queue>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
 
 namespace fs = std::filesystem;
 namespace beast = boost::beast;
@@ -38,9 +37,10 @@ using json = nlohmann::json;
 using tcp = net::ip::tcp;
 
 void print_help() {
-    std::cout
-            << "PhoenixCLI is a large language model runner developed by osllm.ai. It is open-source software that you can use freely to run and manage large language models."
-            << std::endl;
+    std::cout << "PhoenixCLI is a large language model runner developed by "
+                 "osllm.ai. It is open-source software that you can use freely "
+                 "to run and manage large language models."
+              << std::endl;
     std::cout << std::endl;
     std::cout << "Usage:" << std::endl;
     std::cout << "phoenix [flags]" << std::endl;
@@ -48,26 +48,40 @@ void print_help() {
     std::cout << std::endl;
     std::cout << "Available Commands:" << std::endl;
     std::cout << "  serve\t\tStart the phoenix server" << std::endl;
-    std::cout << "  list\t\tDisplays a list of all available models that you can run or manage" << std::endl;
+    std::cout << "  list\t\tDisplays a list of all available models that you can "
+                 "run or manage"
+              << std::endl;
     std::cout << "  show\t\tShow full information about a model" << std::endl;
-    std::cout << "  run\t\tExecutes a model based on your specified input" << std::endl;
-    std::cout << "  exec\t\tRuns a model directly on your local machine" << std::endl;
-    std::cout << "  pull\t\tRetrieves a model from the registry and stores it locally" << std::endl;
+    std::cout << "  run\t\tExecutes a model based on your specified input"
+              << std::endl;
+    std::cout << "  exec\t\tRuns a model directly on your local machine"
+              << std::endl;
+    std::cout
+            << "  pull\t\tRetrieves a model from the registry and stores it locally"
+            << std::endl;
     std::cout << "  rm\t\tRemove a model from your local storage" << std::endl;
     std::cout << "  history\tShows a list of your previous chats" << std::endl;
-    std::cout << "  help\t\tProvides detailed information and guidance about any specific command" << std::endl;
+    std::cout << "  help\t\tProvides detailed information and guidance about any "
+                 "specific command"
+              << std::endl;
     std::cout << std::endl;
     std::cout << "Flags:" << std::endl;
-    std::cout << "  -h, --help\tDisplays help information for the phoenix command" << std::endl;
-    std::cout << "  -v, --version\tOutputs the current version of PhoenixCLI" << std::endl;
+    std::cout << "  -h, --help\tDisplays help information for the phoenix command"
+              << std::endl;
+    std::cout << "  -v, --version\tOutputs the current version of PhoenixCLI"
+              << std::endl;
     std::cout << std::endl;
-    std::cout << "Use \"phoenix [command] --help\" for more information about a command." << std::endl;
+    std::cout << "Use \"phoenix [command] --help\" for more information about a "
+                 "command."
+              << std::endl;
 }
 
 void handle_run_command(const std::string &model_name) {
     sqlite3 *db;
-    if (sqlite3_open("phoenix.db", &db) == SQLITE_OK) {
-        std::string model_path = DatabaseManager::get_path_by_model_name(db, model_name);
+    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
+        std::string model_path =
+                DatabaseManager::get_path_by_model_name(db, model_name);
         if (model_path.empty()) {
             std::cerr << "Failed to find model: " << model_name << std::endl;
             sqlite3_close(db);
@@ -80,7 +94,9 @@ void handle_run_command(const std::string &model_name) {
             sqlite3_close(db);
             run_command(prompt_template, model_path);
         } else {
-            std::cerr << "Error: 'promptTemplate' is missing or not a string for model: " << model_name << std::endl;
+            std::cerr
+                    << "Error: 'promptTemplate' is missing or not a string for model: "
+                    << model_name << std::endl;
             sqlite3_close(db);
             return;
         }
@@ -89,11 +105,11 @@ void handle_run_command(const std::string &model_name) {
     }
 }
 
-
 void handle_pull_command(const std::string &model_name) {
     json model = model_data(model_name);
     if (model.empty()) {
-        std::cerr << "Model not found in the list of available models." << std::endl;
+        std::cerr << "Model not found in the list of available models."
+                  << std::endl;
         return;
     }
     std::string model_url = get_url_llm_download(model_name);
@@ -101,14 +117,17 @@ void handle_pull_command(const std::string &model_name) {
         std::cerr << "Model URL not found." << std::endl;
         return;
     }
-    DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path() + "/models",
-                                              model["companyName"].get<std::string>());
-    const std::string model_path = DirectoryManager::get_app_home_path() + "/models/" +
-                                   model["companyName"].get<std::string>() + "/" + model["filename"].get<std::string>();
-    sqlite3 *db;
-
+    DirectoryManager::create_custom_directory(
+            DirectoryManager::get_app_home_path() + "/models",
+            model["companyName"].get<std::string>());
+    const std::string model_path = DirectoryManager::get_app_home_path() +
+                                   "/models/" +
+                                   model["companyName"].get<std::string>() + "/" +
+                                   model["filename"].get<std::string>();
     if (download_model_file(model_url, model_path)) {
-        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+        sqlite3 *db;
+        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
             DatabaseManager::insert_models(db, model_name, model_path);
             sqlite3_close(db);
         }
@@ -123,13 +142,14 @@ void handle_list_command(const std::string &option) {
         std::cout << "List models which downloaded" << std::endl;
         std::cout << "----------------------------" << std::endl;
         sqlite3 *db;
-        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
             DatabaseManager::read_models(db);
             sqlite3_close(db);
         }
-//        for (const auto &model: DirectoryManager::local_models()) {
-//            std::cout << model << std::endl;
-//        }
+        //        for (const auto &model: DirectoryManager::local_models()) {
+        //            std::cout << model << std::endl;
+        //        }
     } else if (option == "--remote") {
         std::cout << "List models which you can download" << std::endl;
         std::cout << "----------------------------" << std::endl;
@@ -138,7 +158,8 @@ void handle_list_command(const std::string &option) {
             std::cout << key << std::endl;
         }
     } else {
-        std::cout << "You can see which models located in your local machine or exists on phoenix to download"
+        std::cout << "You can see which models located in your local machine or "
+                     "exists on phoenix to download"
                   << std::endl;
         std::cout << std::endl;
         std::cout << "  --local\tList of local machine LLMs" << std::endl;
@@ -149,15 +170,18 @@ void handle_list_command(const std::string &option) {
 void handle_exec_command(const std::string &model_path) {
     std::string prompt_template;
     std::cout << "Enter your prompt template" << std::endl;
-    std::cout
-            << "If your leave blank, default template used:\n <|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>"
-            << std::endl;
+    std::cout << "If your leave blank, default template used:\n "
+                 "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|"
+                 "start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>"
+              << std::endl;
     std::cout << ">>> ";
 
     std::getline(std::cin, prompt_template);
 
     if (prompt_template.empty()) {
-        prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
+        prompt_template =
+                "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_"
+                "header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
     }
     run_command(prompt_template, model_path);
 }
@@ -167,18 +191,20 @@ void handle_history_command(const std::string &chat_id) {
         std::cout << "List of your chats:" << std::endl;
         std::cout << "----------------------------" << std::endl;
         sqlite3 *db;
-        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
             DatabaseManager::read_chat_histories(db);
             sqlite3_close(db);
         }
-//        std::vector<std::string> history = ChatManager::chat_histories();
-//        for (const auto &chat: history) {
-//            std::cout << chat << std::endl;
-//        }
+        //        std::vector<std::string> history = ChatManager::chat_histories();
+        //        for (const auto &chat: history) {
+        //            std::cout << chat << std::endl;
+        //        }
     } else {
         std::string chat_file_path;
         sqlite3 *db;
-        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
             chat_file_path = DatabaseManager::get_path_by_filename(db, chat_id);
             sqlite3_close(db);
         }
@@ -195,7 +221,8 @@ void handle_rm_command(const std::string &model_name) {
     if (DirectoryManager::delete_model(model_name)) {
         std::cout << "Model deleted" << std::endl;
         sqlite3 *db;
-        if (sqlite3_open("./build/bin/phoenix.db", &db) == SQLITE_OK) {
+        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
             DatabaseManager::delete_model(db, model_name);
             sqlite3_close(db);
         }
@@ -204,8 +231,8 @@ void handle_rm_command(const std::string &model_name) {
     }
 }
 
-
-void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buffer) {
+void handle_request(std::shared_ptr<tcp::socket> socket,
+                    beast::flat_buffer buffer) {
     try {
         // Read the request
         http::request<http::dynamic_body> req;
@@ -244,7 +271,7 @@ void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buff
                 res.set(http::field::server, "Beast");
                 res.set(http::field::content_type, "application/json");
                 res.set(http::field::transfer_encoding, "chunked");
-                res.keep_alive(keep_alive);  // Keep-Alive header
+                res.keep_alive(keep_alive); // Keep-Alive header
 
                 // Send the headers
                 http::serializer<false, http::empty_body> sr{res};
@@ -279,7 +306,8 @@ void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buff
                 boost::system::error_code ec;
                 boost::asio::write(*socket, boost::asio::buffer("0\r\n\r\n"), ec);
                 if (ec) {
-                    std::cerr << "Error sending terminating chunk: " << ec.message() << std::endl;
+                    std::cerr << "Error sending terminating chunk: " << ec.message()
+                              << std::endl;
                 }
 
             } else {
@@ -298,18 +326,19 @@ void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buff
                 res.set(http::field::content_type, "application/json");
                 res.body() = json_response;
                 res.prepare_payload();
-                res.keep_alive(keep_alive);  // Keep-Alive header
+                res.keep_alive(keep_alive); // Keep-Alive header
 
                 http::write(*socket, res);
             }
         } else {
             // Return an error response for invalid requests
-            http::response<http::string_body> res{http::status::bad_request, req.version()};
+            http::response<http::string_body> res{http::status::bad_request,
+                                                  req.version()};
             res.set(http::field::server, "Beast");
             res.set(http::field::content_type, "application/json");
             res.body() = R"({"error": "Invalid request"})";
             res.prepare_payload();
-            res.keep_alive(keep_alive);  // Keep-Alive header
+            res.keep_alive(keep_alive); // Keep-Alive header
 
             http::write(*socket, res);
         }
@@ -320,7 +349,8 @@ void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buff
 
     } catch (const std::exception &e) {
         std::cerr << "Error handling request: " << e.what() << std::endl;
-        http::response<http::string_body> res{http::status::internal_server_error, 11};
+        http::response<http::string_body> res{http::status::internal_server_error,
+                                              11};
         res.set(http::field::server, "Beast");
         res.set(http::field::content_type, "application/json");
         res.body() = R"({"error": "Internal server error"})";
@@ -344,16 +374,15 @@ std::string handle_server() {
         std::vector<std::thread> thread_pool;
 
         for (int i = 0; i < num_threads; ++i) {
-            thread_pool.emplace_back([&ioc]() {
-                ioc.run();
-            });
+            thread_pool.emplace_back([&ioc]() { ioc.run(); });
         }
 
         for (;;) {
             auto socket = std::make_shared<tcp::socket>(ioc);
             acceptor.accept(*socket);
 
-            std::cout << "New connection accepted from " << socket->remote_endpoint() << std::endl;
+            std::cout << "New connection accepted from " << socket->remote_endpoint()
+                      << std::endl;
 
             beast::flat_buffer buffer;
 
@@ -361,7 +390,8 @@ std::string handle_server() {
                 try {
                     handle_request(socket, std::move(buffer));
                 } catch (const std::exception &e) {
-                    std::cerr << "Error in request handler thread: " << e.what() << std::endl;
+                    std::cerr << "Error in request handler thread: " << e.what()
+                              << std::endl;
                 }
             }}.detach();
         }
@@ -393,8 +423,10 @@ void handle_serve_command(const std::string &model_name) {
 void show_commands(int argc, char **argv) {
     // Directory management
     DirectoryManager::handle_application_directory();
-    DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path(), "models");
-    DirectoryManager::create_custom_directory(DirectoryManager::get_app_home_path(), "chats");
+    DirectoryManager::create_custom_directory(
+            DirectoryManager::get_app_home_path(), "models");
+    DirectoryManager::create_custom_directory(
+            DirectoryManager::get_app_home_path(), "chats");
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -403,19 +435,22 @@ void show_commands(int argc, char **argv) {
             return;
         } else if (arg == "run") {
             if (i + 1 < argc) {
-                if (argv[i + 1] == std::string("--help") || argv[i + 1] == std::string("-h")) {
+                if (argv[i + 1] == std::string("--help") ||
+                    argv[i + 1] == std::string("-h")) {
                     std::cout << "Run a model" << std::endl;
                     return;
                 }
                 handle_run_command(argv[i + 1]);
                 return;
             } else {
-                std::cout << "Error: 'run' command requires a model argument" << std::endl;
+                std::cout << "Error: 'run' command requires a model argument"
+                          << std::endl;
                 return;
             }
         } else if (arg == "pull") {
             if (i + 1 < argc) {
-                if (argv[i + 1] == std::string("--help") || argv[i + 1] == std::string("-h")) {
+                if (argv[i + 1] == std::string("--help") ||
+                    argv[i + 1] == std::string("-h")) {
                     std::cout << "Download LLM" << std::endl;
                     return;
                 }
@@ -459,7 +494,8 @@ void show_commands(int argc, char **argv) {
         } else if (arg == "history") {
             if (i + 1 < argc) {
                 if (argv[i + 1] == std::string("--help")) {
-                    std::cout << "All chat conversations generated in your home" << std::endl;
+                    std::cout << "All chat conversations generated in your home"
+                              << std::endl;
                     std::cout << "Usage:" << std::endl;
                     std::cout << "  ./phoenix history" << std::endl;
                     std::cout << std::endl;
@@ -497,8 +533,8 @@ void show_commands(int argc, char **argv) {
             }
 
         } else {
-            std::cout << "Unknown command. Use --help for usage information." << std::endl;
+            std::cout << "Unknown command. Use --help for usage information."
+                      << std::endl;
         }
     }
-
 }

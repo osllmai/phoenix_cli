@@ -3,17 +3,25 @@
 #include <iostream>
 #include <fstream>
 #include <curl/curl.h>
-#include <sys/stat.h>
 #include <iomanip>
 #include <chrono>
 #include <thread>
 #include <cstdio>
 
-#define MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL 3 
+#ifdef _WIN32
+#include <windows.h>
+#include <direct.h>
+#define stat _stat
+#define snprintf sprintf_s
+#else
+#include <sys/stat.h>
+#endif
+
+#define MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL 3
 
 struct myprogress
 {
-    double lastruntime; 
+    double lastruntime;
     CURL *curl;
 };
 
@@ -52,7 +60,6 @@ int progress_callback(void *p,
 
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &curtime);
 
-
     std::string downloaded = human_readable_size(dlnow);
     std::string total = human_readable_size(dltotal);
 
@@ -68,7 +75,7 @@ bool is_directory(const std::string &path)
     {
         return false;
     }
-    return S_ISDIR(statbuf.st_mode);
+    return (statbuf.st_mode & S_IFDIR) != 0;
 }
 
 bool download_model_file(const std::string &url, const std::string &model_path)
@@ -95,7 +102,7 @@ bool download_model_file(const std::string &url, const std::string &model_path)
     if (curl)
     {
         prog.curl = curl;
-        prog.lastruntime = 0.0; 
+        prog.lastruntime = 0.0;
 
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);

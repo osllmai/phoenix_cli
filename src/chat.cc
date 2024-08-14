@@ -5,6 +5,7 @@
 #include "chat_manager.h"
 #include "web_server.h"
 #include "database_manager.h"
+#include "directory_manager.h"
 
 #include <string>
 #include <atomic>
@@ -240,7 +241,8 @@ int run_command(const std::string &prompt_template, const std::string &model_pat
 
         std::string path = ChatManager::save_chat_history(unique_identifier, input.c_str(), answer.c_str());
         sqlite3 *db;
-        if (sqlite3_open("./build/bin/phoenix.db", &db) == 0) {
+        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
             DatabaseManager::insert_chat_history(db, unique_identifier, path);
             sqlite3_close(db);
         }
@@ -393,7 +395,8 @@ std::string chat_with_api(const std::string &prompt_template, const std::string 
     std::string path = ChatManager::save_chat_history(unique_identifier, prompt, answer);
 
     sqlite3 *db;
-    if (sqlite3_open("phoenix.db", &db) == SQLITE_OK) {
+    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
         DatabaseManager::insert_chat_history(db, unique_identifier, path);
         sqlite3_close(db);
     } else {
@@ -535,7 +538,8 @@ std::string chat_with_api_stream(const std::string &prompt_template, const std::
     std::string path = ChatManager::save_chat_history(unique_identifier, prompt, answer);
 
     sqlite3 *db;
-    if (sqlite3_open("phoenix.db", &db) == SQLITE_OK) {
+    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
         DatabaseManager::insert_chat_history(db, unique_identifier, path);
         sqlite3_close(db);
     } else {
