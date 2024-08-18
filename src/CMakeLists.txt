@@ -66,7 +66,6 @@ target_include_directories(${LIBRARY_NAME} PUBLIC
 
 if (APPLE)
     target_link_libraries(${LIBRARY_NAME} PUBLIC
-            spdlog::spdlog
             nlohmann_json::nlohmann_json
             CURL::libcurl
             SQLite::SQLite3
@@ -79,7 +78,6 @@ elseif (UNIX)
     # Add UNIX-specific configurations here if needed
 elseif (WIN32)
     target_link_libraries(${LIBRARY_NAME} PUBLIC
-            spdlog::spdlog
             nlohmann_json::nlohmann_json
             CURL::libcurl
             llmodel
