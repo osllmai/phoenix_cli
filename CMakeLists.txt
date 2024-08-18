@@ -12,9 +12,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Enable logging option
-option(LOCAL_DEBUG "Enable logging" ON)
-
 # Define project-related names
 set(LIBRARY_NAME Lib)
 set(EXECUTABLE_NAME phoenix)
@@ -23,20 +20,6 @@ set(EXECUTABLE_NAME phoenix)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
 include(AddGitSubmodule)
 include(FetchContent)
-
-# Fetch dependencies
-if (LOCAL_DEBUG)
-    message(STATUS "Logging is active")
-    FetchContent_Declare(
-            spdlog
-            GIT_REPOSITORY https://github.com/gabime/spdlog.git
-            GIT_TAG v1.14.1
-            GIT_SHALLOW TRUE
-    )
-    FetchContent_MakeAvailable(spdlog)
-else ()
-    message(STATUS "Logging is inactive")
-endif ()
 
 FetchContent_Declare(
         nlohmann_json
@@ -87,7 +70,6 @@ option(LLAMA_AVX512 "llama: Enable AVX512" ${AVX512})
 option(LLAMA_AVX512_VBMI "llama: Enable AVX512-VBMI" ${AVX512})
 option(LLAMA_AVX512_VNNI "llama: Enable AVX512-VNNI" ${AVX512})
 option(LLAMA_FMA "llama: Enable FMA" ${AVX2})
-option(BUILD_MACOS_BUNDLE "Build as macOS application bundle" OFF)
 
 # Sanitizers
 if (GGML_SANITIZE_THREAD)
@@ -138,69 +120,6 @@ add_subdirectory(phoenix)
 add_subdirectory(src)
 add_subdirectory(app)
 
-
-# macOS Application Bundle Configuration
-if (APPLE)
-    set(MACOSX_BUNDLE TRUE)
-    set(MACOSX_BUNDLE_ICON_FILE "icon.icns")
-    set(APP_ICON_MACOSX ${CMAKE_SOURCE_DIR}/resources/${MACOSX_BUNDLE_ICON_FILE})
-    # Set application bundle properties
-    set_target_properties(${EXECUTABLE_NAME} PROPERTIES
-            MACOSX_BUNDLE TRUE
-            MACOSX_BUNDLE_GUI_IDENTIFIER "com.yourcompany.${PROJECT_NAME}"
-            MACOSX_BUNDLE_BUNDLE_NAME "${PROJECT_NAME}"
-            MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
-            MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
-            MACOSX_BUNDLE_ICON_FILE "icon.icns"
-    )
-
-
-    # Ensure the icon file is copied to the correct location in the app bundle
-    set_source_files_properties(${APP_ICON_MACOSX} PROPERTIES
-            MACOSX_PACKAGE_LOCATION "Resources"
-    )
-
-    # Add the icon to the target sources
-    target_sources(${EXECUTABLE_NAME} PRIVATE ${APP_ICON_MACOSX})
-
-    set(DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/resources/background.png")
-    set(CPACK_DMG_BACKGROUND_IMAGE ${DMG_BACKGROUND_IMAGE})
-
-    # Copy background image to the .background folder
-    set(DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/resources/background.png")
-    install(FILES ${DMG_BACKGROUND_IMAGE} DESTINATION .background COMPONENT ${COMPONENT_NAME_MAIN})
-
-    # Ensure the icon is included in the DMG
-    install(FILES ${APP_ICON_MACOSX} DESTINATION . COMPONENT ${COMPONENT_NAME_MAIN})
-
-    # Set DMG properties
-    set(CPACK_DMG_BACKGROUND_IMAGE ${DMG_BACKGROUND_IMAGE})
-    set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/create_ds_store.applescript")
-    set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK OFF)
-
-    set_target_properties(${EXECUTABLE_NAME} PROPERTIES
-            MACOSX_BUNDLE TRUE
-            MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/resources/Info.plist
-            RESOURCE ${APP_ICON_MACOSX}
-            MACOSX_BUNDLE_ICON_FILE ${MACOSX_BUNDLE_ICON_FILE}
-            MACOSX_BUNDLE_BUNDLE_NAME "${PROJECT_NAME}"
-            MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
-            MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
-            MACOSX_BUNDLE_GUI_IDENTIFIER "com.yourcompany.${PROJECT_NAME}"
-            MACOSX_BUNDLE_COPYRIGHT "© 2024 Your Company Name. All rights reserved."
-    )
-
-    # Install the app bundle
-    install(TARGETS ${EXECUTABLE_NAME}
-            BUNDLE DESTINATION . COMPONENT ${COMPONENT_NAME_MAIN}
-            RUNTIME DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN}
-    )
-else ()
-    install(TARGETS ${EXECUTABLE_NAME}
-            RUNTIME DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN}
-    )
-endif ()
-
 # Install configuration
 set(COMPONENT_NAME_MAIN ${PROJECT_NAME})
 
@@ -227,41 +146,10 @@ install(
         RUNTIME DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN}  # .dll
 )
 
-# macOS code signing (optional)
-if (APPLE AND GPT4ALL_SIGN_INSTALL)
-    include(SignMacOSBinaries)
-    install_sign_osx(${EXECUTABLE_NAME})
-    install_sign_osx(llmodel)
-    foreach (tgt ${MODEL_IMPL_TARGETS})
-        install_sign_osx(${tgt})
-    endforeach ()
-endif ()
-
-# Platform-specific packaging
-if (APPLE AND BUILD_MACOS_BUNDLE)
-    set(CPACK_GENERATOR "DragNDrop")
-    set(CPACK_DMG_VOLUME_NAME "${PROJECT_NAME}-${VERSION}")
-    set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/resources/background.png")
-    set(CPACK_BUNDLE_NAME ${PROJECT_NAME})
-
-    set(CPACK_BUNDLE_ICON "${CMAKE_SOURCE_DIR}/resources/icon.icns")
-    set(CPACK_DMG_FORMAT "UDZO")
-    set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/create_ds_store.applescript")
-    configure_file("${CMAKE_SOURCE_DIR}/scripts/create_ds_store.applescript.in"
-            "${CMAKE_CURRENT_BINARY_DIR}/create_ds_store.applescript" @ONLY)
-    set(CPACK_DMG_DISABLE_APPLICATIONS_SYMLINK FALSE)
-elseif (WIN32)
-    set(CPACK_GENERATOR "NSIS")
-    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
-    set(CPACK_NSIS_MODIFY_PATH ON)
-    set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/resources/icon.ico")
-    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/resources/icon.ico")
-else ()
-    set(CPACK_GENERATOR "TGZ;DEB")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
-    set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.17), libstdc++6 (>= 4.8)")
-endif ()
+# Install the executable
+install(TARGETS ${EXECUTABLE_NAME}
+        RUNTIME DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN}
+)
 
 # Common CPack settings
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
@@ -277,18 +165,8 @@ set(CPACK_PACKAGE_HOMEPAGE_URL "https://example.com")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
 
-# Set the output directory for the DMG file
+# Set the output directory for the package file
 set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/package")
-
-
-# Debug output
-message(STATUS "PROJECT_NAME: ${PROJECT_NAME}")
-message(STATUS "VERSION: ${VERSION}")
-message(STATUS "CPACK_DMG_VOLUME_NAME: ${CPACK_DMG_VOLUME_NAME}")
-message(STATUS "CPACK_PACKAGE_FILE_NAME: ${CPACK_PACKAGE_FILE_NAME}")
-message(STATUS "MACOSX_BUNDLE_ICON_FILE: ${MACOSX_BUNDLE_ICON_FILE}")
-message(STATUS "APP_ICON_MACOSX: ${APP_ICON_MACOSX}")
-message(STATUS "DMG_BACKGROUND_IMAGE: ${DMG_BACKGROUND_IMAGE}")
 
 # Include CPack to generate installers
 include(CPack)
