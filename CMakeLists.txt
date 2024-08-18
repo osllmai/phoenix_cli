@@ -120,53 +120,56 @@ add_subdirectory(phoenix)
 add_subdirectory(src)
 add_subdirectory(app)
 
-# Install configuration
-set(COMPONENT_NAME_MAIN ${PROJECT_NAME})
 
-if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/install CACHE PATH "..." FORCE)
-endif ()
+# -------- install --------#
+include(InstallRequiredSystemLibraries)
 
-# Install the llmodel library
-install(
-        TARGETS llmodel
-        LIBRARY DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN}  # .so/.dylib
-        RUNTIME DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN}  # .dll
+# Path to the background image
+set(CPACK_DMG_BACKGROUND_IMAGE "${PROJECT_SOURCE_DIR}/resources/background.png")
+
+# Path to the icon image
+set(CPACK_DMG_ICON "${PROJECT_SOURCE_DIR}/resources/icon.icns")
+
+set(CPACK_GENERATOR "DragNDrop")
+set(CPACK_PACKAGE_NAME "Phoenix")
+set(CPACK_PACKAGE_VERSION ${VERSION})
+set(CPACK_DMG_VOLUME_NAME "PhoenixInstaller")
+set(MACOSX_BUNDLE_EXECUTABLE_NAME ${EXECUTABLE_NAME})
+set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.yourcompany.phoenix")
+set(MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_NAME})
+set(MACOSX_BUNDLE_SHORT_VERSION_STRING ${VERSION})
+set(MACOSX_BUNDLE_BUNDLE_VERSION ${VERSION})
+set(MACOSX_BUNDLE_COPYRIGHT "Your Company © ${VERSION_YEAR}")
+
+
+
+# Disable DS_Store settings
+
+set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/create_ds_store.applescript")
+configure_file("${CMAKE_SOURCE_DIR}/scripts/create_ds_store.applescript.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/create_ds_store.applescript" @ONLY)
+
+set(CPACK_DMG_FORMAT UDZO)
+
+# Application bundle setup
+set(CPACK_PACKAGE_EXECUTABLES "phoenix" "Phoenix")
+
+install(TARGETS ${EXECUTABLE_NAME} DESTINATION "Phoenix.app/Contents/MacOS")
+install(FILES ${PROJECT_SOURCE_DIR}/resources/background.png DESTINATION ".background")
+install(FILES ${PROJECT_SOURCE_DIR}/resources/Info.plist DESTINATION "Phoenix.app/Contents")
+install(FILES ${PROJECT_SOURCE_DIR}/resources/icon.icns DESTINATION "Phoenix.app/Contents/Resources")
+install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/ DESTINATION "Phoenix.app/Contents/MacOS")
+
+# Configure the script with the correct path
+# Configure the script with the correct path
+configure_file(
+        "${CMAKE_SOURCE_DIR}/scripts/update_path.sh.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh"
+        @ONLY
 )
 
-# Install specific model implementations based on platform and configuration
-set(MODEL_IMPL_TARGETS llamamodel-mainline-cpu llamamodel-mainline-cpu-avxonly)
-if (APPLE)
-    list(APPEND MODEL_IMPL_TARGETS llamamodel-mainline-metal)
-endif ()
+# Install the script to the app bundle or user's home directory
+install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh" DESTINATION "$ENV{HOME}/Phoenix")
 
-install(
-        TARGETS ${MODEL_IMPL_TARGETS}
-        LIBRARY DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN}  # .so/.dylib
-        RUNTIME DESTINATION lib COMPONENT ${COMPONENT_NAME_MAIN}  # .dll
-)
-
-# Install the executable
-install(TARGETS ${EXECUTABLE_NAME}
-        RUNTIME DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN}
-)
-
-# Common CPack settings
-set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
-set(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${VERSION_PATCH})
-set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-${VERSION}-${CMAKE_SYSTEM_NAME}")
-set(CPACK_PACKAGE_CONTACT "youremail@example.com")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Installer for ${PROJECT_NAME}")
-set(CPACK_PACKAGE_VENDOR "YourCompany")
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_NAME}")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://example.com")
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE.txt")
-set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
-
-# Set the output directory for the package file
-set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/package")
-
-# Include CPack to generate installers
 include(CPack)
+
