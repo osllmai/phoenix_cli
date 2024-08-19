@@ -125,13 +125,23 @@ add_subdirectory(app)
 include(InstallRequiredSystemLibraries)
 
 # Determine the system
-if(APPLE)
+if (APPLE)
     set(CPACK_SYSTEM_NAME "macOS")
-elseif(WIN32)
+elseif (WIN32)
     set(CPACK_SYSTEM_NAME "Windows")
-elseif(UNIX AND NOT APPLE)
+elseif (UNIX AND NOT APPLE)
     set(CPACK_SYSTEM_NAME "Linux")
+endif ()
+
+if(WIN32)
+    set(VULKAN_SDK $ENV{VULKAN_SDK})
+    if(VULKAN_SDK)
+        set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "${VULKAN_SDK}")
+    endif()
+    # Find Vulkan package
+    find_package(Vulkan REQUIRED)
 endif()
+
 
 # Common settings
 set(CPACK_PACKAGE_NAME "Phoenix")
@@ -142,7 +152,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "Phoenix")
 
 # macOS specific configurations
-if(APPLE)
+if (APPLE)
     set(CPACK_GENERATOR "DragNDrop")
     set(CPACK_DMG_FORMAT "UDZO")
     set(CPACK_DMG_VOLUME_NAME "PhoenixInstaller")
@@ -174,8 +184,8 @@ if(APPLE)
     )
     install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh" DESTINATION "$ENV{HOME}/Phoenix")
 
-    # Windows specific configurations
-elseif(WIN32)
+# Windows specific configurations
+elseif (WIN32)
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_NSIS_PACKAGE_NAME "Phoenix")
     set(CPACK_NSIS_DISPLAY_NAME "Phoenix")
@@ -192,7 +202,7 @@ elseif(WIN32)
     # install(FILES ${PROJECT_SOURCE_DIR}/path/to/additional/dll DESTINATION bin)
 
     # Linux specific configurations
-elseif(UNIX AND NOT APPLE)
+elseif (UNIX AND NOT APPLE)
     set(CPACK_GENERATOR "DEB;RPM")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
@@ -207,7 +217,7 @@ elseif(UNIX AND NOT APPLE)
     # Install desktop file and icon for Linux
     install(FILES "${PROJECT_SOURCE_DIR}/resources/phoenix.desktop" DESTINATION share/applications)
     install(FILES "${PROJECT_SOURCE_DIR}/resources/phoenix.png" DESTINATION share/icons/hicolor/256x256/apps)
-endif()
+endif ()
 
 # Common installation for all platforms
 install(FILES ${PROJECT_SOURCE_DIR}/LICENSE.txt DESTINATION share/doc/phoenix)

@@ -47,7 +47,6 @@ find_package(Boost 1.70 REQUIRED COMPONENTS system)
 find_package(SQLite3 REQUIRED)
 
 
-
 add_library(${LIBRARY_NAME}
         STATIC
         ${LIBRARY_SOURCES}
@@ -77,20 +76,31 @@ if (APPLE)
 elseif (UNIX)
     # Add UNIX-specific configurations here if needed
 elseif (WIN32)
-    target_link_libraries(${LIBRARY_NAME} PUBLIC
-            nlohmann_json::nlohmann_json
-            CURL::libcurl
-            llmodel
-            llama-mainline-kompute
-            llama-mainline-kompute-avxonly
-            llamamodel-mainline-kompute
-            llamamodel-mainline-kompute-avxonly
-            llama-mainline-cuda
-            llamamodel-mainline-cuda
-            llama-mainline-cuda-avxonly
-            llamamodel-mainline-kompute-avxonly
-            ${CUDA_LIBRARIES}
-    )
+    find_package(Kompute QUIET)
+    if (Kompute_FOUND)
+        target_link_libraries(${LIBRARY_NAME} PUBLIC
+                nlohmann_json::nlohmann_json
+                CURL::libcurl
+                llmodel
+                llama-mainline-kompute
+                llama-mainline-kompute-avxonly
+                llamamodel-mainline-kompute
+                llamamodel-mainline-kompute-avxonly
+                ${Kompute_LIBRARIES}
+                ${Vulkan_LIBRARIES}
+        )
+    else ()
+        target_link_libraries(${LIBRARY_NAME} PUBLIC
+                nlohmann_json::nlohmann_json
+                CURL::libcurl
+                llmodel
+                llama-mainline-cuda
+                llamamodel-mainline-cuda
+                llama-mainline-cuda-avxonly
+                llamamodel-mainline-cuda-avxonly
+                ${CUDA_LIBRARIES}
+        )
+    endif ()
 
     # Set CUDA architecture (optional, adjust according to your GPU)
     set_target_properties(${LIBRARY_NAME} PROPERTIES CUDA_ARCHITECTURES "52;60;61;70;75;80;86")
