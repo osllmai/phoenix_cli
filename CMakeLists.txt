@@ -124,52 +124,93 @@ add_subdirectory(app)
 # -------- install --------#
 include(InstallRequiredSystemLibraries)
 
-# Path to the background image
-set(CPACK_DMG_BACKGROUND_IMAGE "${PROJECT_SOURCE_DIR}/resources/background.png")
+# Determine the system
+if(APPLE)
+    set(CPACK_SYSTEM_NAME "macOS")
+elseif(WIN32)
+    set(CPACK_SYSTEM_NAME "Windows")
+elseif(UNIX AND NOT APPLE)
+    set(CPACK_SYSTEM_NAME "Linux")
+endif()
 
-# Path to the icon image
-set(CPACK_DMG_ICON "${PROJECT_SOURCE_DIR}/resources/icon.icns")
-
-set(CPACK_GENERATOR "DragNDrop")
+# Common settings
 set(CPACK_PACKAGE_NAME "Phoenix")
 set(CPACK_PACKAGE_VERSION ${VERSION})
-set(CPACK_DMG_VOLUME_NAME "PhoenixInstaller")
-set(MACOSX_BUNDLE_EXECUTABLE_NAME ${EXECUTABLE_NAME})
-set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.yourcompany.phoenix")
-set(MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_NAME})
-set(MACOSX_BUNDLE_SHORT_VERSION_STRING ${VERSION})
-set(MACOSX_BUNDLE_BUNDLE_VERSION ${VERSION})
-set(MACOSX_BUNDLE_COPYRIGHT "Your Company © ${VERSION_YEAR}")
+set(CPACK_PACKAGE_VENDOR "Your Company Name")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Phoenix Application")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "Phoenix")
 
+# macOS specific configurations
+if(APPLE)
+    set(CPACK_GENERATOR "DragNDrop")
+    set(CPACK_DMG_FORMAT "UDZO")
+    set(CPACK_DMG_VOLUME_NAME "PhoenixInstaller")
+    set(CPACK_DMG_BACKGROUND_IMAGE "${PROJECT_SOURCE_DIR}/resources/background.png")
+    set(CPACK_DMG_ICON "${PROJECT_SOURCE_DIR}/resources/icon.icns")
+    set(MACOSX_BUNDLE_EXECUTABLE_NAME ${EXECUTABLE_NAME})
+    set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.yourcompany.phoenix")
+    set(MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_NAME})
+    set(MACOSX_BUNDLE_SHORT_VERSION_STRING ${VERSION})
+    set(MACOSX_BUNDLE_BUNDLE_VERSION ${VERSION})
+    set(MACOSX_BUNDLE_COPYRIGHT "Your Company © ${VERSION_YEAR}")
 
+    # Disable DS_Store settings
+    set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/create_ds_store.applescript")
+    configure_file("${CMAKE_SOURCE_DIR}/scripts/create_ds_store.applescript.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/create_ds_store.applescript" @ONLY)
 
-# Disable DS_Store settings
+    install(TARGETS ${EXECUTABLE_NAME} DESTINATION "Phoenix.app/Contents/MacOS")
+    install(FILES ${PROJECT_SOURCE_DIR}/resources/background.png DESTINATION ".background")
+    install(FILES ${PROJECT_SOURCE_DIR}/resources/Info.plist DESTINATION "Phoenix.app/Contents")
+    install(FILES ${PROJECT_SOURCE_DIR}/resources/icon.icns DESTINATION "Phoenix.app/Contents/Resources")
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/ DESTINATION "Phoenix.app/Contents/MacOS")
 
-set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/create_ds_store.applescript")
-configure_file("${CMAKE_SOURCE_DIR}/scripts/create_ds_store.applescript.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/create_ds_store.applescript" @ONLY)
+    # Configure and install the update_path script
+    configure_file(
+            "${CMAKE_SOURCE_DIR}/scripts/update_path.sh.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh"
+            @ONLY
+    )
+    install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh" DESTINATION "$ENV{HOME}/Phoenix")
 
-set(CPACK_DMG_FORMAT UDZO)
+    # Windows specific configurations
+elseif(WIN32)
+    set(CPACK_GENERATOR "NSIS")
+    set(CPACK_NSIS_PACKAGE_NAME "Phoenix")
+    set(CPACK_NSIS_DISPLAY_NAME "Phoenix")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\phoenix.exe")
+    set(CPACK_NSIS_HELP_LINK "http://www.yourcompany.com")
+    set(CPACK_NSIS_URL_INFO_ABOUT "http://www.yourcompany.com")
+    set(CPACK_NSIS_CONTACT "your.email@example.com")
+    set(CPACK_NSIS_MODIFY_PATH ON)
 
-# Application bundle setup
-set(CPACK_PACKAGE_EXECUTABLES "phoenix" "Phoenix")
+    # Install the main executable
+    install(TARGETS ${EXECUTABLE_NAME} DESTINATION bin)
 
-install(TARGETS ${EXECUTABLE_NAME} DESTINATION "Phoenix.app/Contents/MacOS")
-install(FILES ${PROJECT_SOURCE_DIR}/resources/background.png DESTINATION ".background")
-install(FILES ${PROJECT_SOURCE_DIR}/resources/Info.plist DESTINATION "Phoenix.app/Contents")
-install(FILES ${PROJECT_SOURCE_DIR}/resources/icon.icns DESTINATION "Phoenix.app/Contents/Resources")
-install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/ DESTINATION "Phoenix.app/Contents/MacOS")
+    # Install any additional DLLs or resources
+    # install(FILES ${PROJECT_SOURCE_DIR}/path/to/additional/dll DESTINATION bin)
 
-# Configure the script with the correct path
-# Configure the script with the correct path
-configure_file(
-        "${CMAKE_SOURCE_DIR}/scripts/update_path.sh.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh"
-        @ONLY
-)
+    # Linux specific configurations
+elseif(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB;RPM")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.19), libstdc++6 (>= 4.8)")
+    set(CPACK_RPM_PACKAGE_LICENSE "Your License")
+    set(CPACK_RPM_PACKAGE_GROUP "Applications/Productivity")
+    set(CPACK_RPM_PACKAGE_REQUIRES "libstdc++ >= 4.8")
 
-# Install the script to the app bundle or user's home directory
-install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh" DESTINATION "$ENV{HOME}/Phoenix")
+    # Install the main executable
+    install(TARGETS ${EXECUTABLE_NAME} DESTINATION bin)
+
+    # Install desktop file and icon for Linux
+    install(FILES "${PROJECT_SOURCE_DIR}/resources/phoenix.desktop" DESTINATION share/applications)
+    install(FILES "${PROJECT_SOURCE_DIR}/resources/phoenix.png" DESTINATION share/icons/hicolor/256x256/apps)
+endif()
+
+# Common installation for all platforms
+install(FILES ${PROJECT_SOURCE_DIR}/LICENSE.txt DESTINATION share/doc/phoenix)
+install(FILES ${PROJECT_SOURCE_DIR}/README.md DESTINATION share/doc/phoenix)
 
 include(CPack)
-
