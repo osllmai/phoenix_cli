@@ -112,25 +112,32 @@ int run_command(const std::string &prompt_template, const std::string &model_pat
     params.model = model_path;
 
     LLModel::PromptContext prompt_context;
-    prompt_context.n_ctx = 2048;
+    prompt_context.n_ctx = 8192;
+    prompt_context.contextErase = 0.9f;
+
     int ngl = 100;
-    LLModel *model = LLModel::Implementation::construct(model_path, "auto", prompt_context.n_ctx);
-//    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
+    std::string backend = "auto";
+
+    LLModel *model = nullptr;
+    model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
 
 
-#if(WIN32)
-    if (params.backend == "cuda") {
+#if defined(WIN32)
+    backend = "cuda";
+    if (backend == "cuda") {
         auto devices = LLModel::Implementation::availableGPUDevices();
         if (!devices.empty()) {
             for (const auto& device : devices) {
-                size_t memoryRequired = devices[0].heapSize;
-                const std::string& name = devices[0].name;
-                const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
-                auto devices = model->availableGPUDevices(memoryRequired);
-                for (const auto& device : devices) {
-                    if (device.name == name && model->initializeGPUDevice(device.index)) {
-                        break;
-                    }
+                //std::cout << "Found GPU: " << device.selectionName() << " with heap size: " << device.heapSize << std::endl;
+            }
+            // Example: Initialize the first available device
+            size_t memoryRequired = devices[0].heapSize;
+            const std::string& name = devices[0].name;
+            const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
+            auto devices = model->availableGPUDevices(memoryRequired);
+            for (const auto& device : devices) {
+                if (device.name == name && model->initializeGPUDevice(device.index)) {
+                    break;
                 }
             }
         }
@@ -251,11 +258,13 @@ int run_command(const std::string &prompt_template, const std::string &model_pat
     }
 
     set_console_color(con_st, DEFAULT);
+    delete model;
     return 0;
 }
 
 
-std::string chat_with_api(const std::string &prompt_template, const std::string &model_path, const std::string &prompt) {
+std::string
+chat_with_api(const std::string &prompt_template, const std::string &model_path, const std::string &prompt) {
     ConsoleState con_st;
     con_st.use_color = true;
     set_console_color(con_st, DEFAULT);
@@ -273,27 +282,34 @@ std::string chat_with_api(const std::string &prompt_template, const std::string 
     LLModel::PromptContext prompt_context;
     prompt_context.n_ctx = 4096;
     int ngl = 100;
-    LLModel *model = LLModel::Implementation::construct(model_path, "auto", prompt_context.n_ctx);
-//    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
+    std::string backend = "auto";
 
-#if(WIN32)
-    if (params.backend == "cuda") {
+    LLModel *model = nullptr;
+    model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
+
+
+#if defined(WIN32)
+    backend = "cuda";
+    if (backend == "cuda") {
         auto devices = LLModel::Implementation::availableGPUDevices();
         if (!devices.empty()) {
             for (const auto& device : devices) {
-                size_t memoryRequired = devices[0].heapSize;
-                const std::string& name = devices[0].name;
-                const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
-                auto devices = model->availableGPUDevices(memoryRequired);
-                for (const auto& device : devices) {
-                    if (device.name == name && model->initializeGPUDevice(device.index)) {
-                        break;
-                    }
+                //std::cout << "Found GPU: " << device.selectionName() << " with heap size: " << device.heapSize << std::endl;
+            }
+            // Example: Initialize the first available device
+            size_t memoryRequired = devices[0].heapSize;
+            const std::string& name = devices[0].name;
+            const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
+            auto devices = model->availableGPUDevices(memoryRequired);
+            for (const auto& device : devices) {
+                if (device.name == name && model->initializeGPUDevice(device.index)) {
+                    break;
                 }
             }
         }
     }
 #endif
+
 
     std::future<void> future;
     stop_display = true;
@@ -412,7 +428,9 @@ std::string chat_with_api(const std::string &prompt_template, const std::string 
 }
 
 
-std::string chat_with_api_stream(const std::string &prompt_template, const std::string &model_path, const std::string &prompt, std::function<void(const std::string&)> token_callback) {
+std::string
+chat_with_api_stream(const std::string &prompt_template, const std::string &model_path, const std::string &prompt,
+                     std::function<void(const std::string &)> token_callback) {
     ConsoleState con_st;
     con_st.use_color = true;
     set_console_color(con_st, DEFAULT);
@@ -430,27 +448,34 @@ std::string chat_with_api_stream(const std::string &prompt_template, const std::
     LLModel::PromptContext prompt_context;
     prompt_context.n_ctx = 4096;
     int ngl = 100;
-    LLModel *model = LLModel::Implementation::construct(model_path, "auto", prompt_context.n_ctx);
-//    std::string prompt_template = "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
+    std::string backend = "auto";
 
-#if(WIN32)
-    if (params.backend == "cuda") {
+    LLModel *model = nullptr;
+    model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
+
+
+#if defined(WIN32)
+    backend = "cuda";
+    if (backend == "cuda") {
         auto devices = LLModel::Implementation::availableGPUDevices();
         if (!devices.empty()) {
             for (const auto& device : devices) {
-                size_t memoryRequired = devices[0].heapSize;
-                const std::string& name = devices[0].name;
-                const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
-                auto devices = model->availableGPUDevices(memoryRequired);
-                for (const auto& device : devices) {
-                    if (device.name == name && model->initializeGPUDevice(device.index)) {
-                        break;
-                    }
+                //std::cout << "Found GPU: " << device.selectionName() << " with heap size: " << device.heapSize << std::endl;
+            }
+            // Example: Initialize the first available device
+            size_t memoryRequired = devices[0].heapSize;
+            const std::string& name = devices[0].name;
+            const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
+            auto devices = model->availableGPUDevices(memoryRequired);
+            for (const auto& device : devices) {
+                if (device.name == name && model->initializeGPUDevice(device.index)) {
+                    break;
                 }
             }
         }
     }
 #endif
+
 
     std::future<void> future;
     stop_display = true;
@@ -491,7 +516,7 @@ std::string chat_with_api_stream(const std::string &prompt_template, const std::
         return true;
     };
 
-    auto response_callback = [token_callback](int32_t token_id, const std::string& responsechars_str) {
+    auto response_callback = [token_callback](int32_t token_id, const std::string &responsechars_str) {
         if (!responsechars_str.empty()) {
 //            std::this_thread::sleep_for(std::chrono::milliseconds(200));
             token_callback(responsechars_str);

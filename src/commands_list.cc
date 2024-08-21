@@ -259,9 +259,9 @@ void handle_request(std::shared_ptr<tcp::socket> socket,
             std::string prompt_template = data["promptTemplate"].get<std::string>();
 
             sqlite3 *db;
-            if (sqlite3_open("phoenix.db", &db) == SQLITE_OK) {
+            const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+            if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
                 path = DatabaseManager::get_path_by_model_name(db, model_name);
-                std::cout << path << std::endl;
                 sqlite3_close(db);
             }
 

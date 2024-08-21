@@ -21,6 +21,15 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
 include(AddGitSubmodule)
 include(FetchContent)
 
+# Configure vcpkg (add this near the top of the file)
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            CACHE STRING "")
+endif()
+# Find Boost (add this after the vcpkg configuration)
+find_package(Boost 1.85 REQUIRED COMPONENTS system filesystem)
+
+
 FetchContent_Declare(
         nlohmann_json
         GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -184,19 +193,44 @@ if (APPLE)
     )
     install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh" DESTINATION "$ENV{HOME}/Phoenix")
 
-# Windows specific configurations
+    # Windows specific configurations
 elseif (WIN32)
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_NSIS_PACKAGE_NAME "Phoenix")
     set(CPACK_NSIS_DISPLAY_NAME "Phoenix")
-    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\phoenix.exe")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\phoenix.exe")
     set(CPACK_NSIS_HELP_LINK "http://www.yourcompany.com")
     set(CPACK_NSIS_URL_INFO_ABOUT "http://www.yourcompany.com")
     set(CPACK_NSIS_CONTACT "your.email@example.com")
     set(CPACK_NSIS_MODIFY_PATH ON)
 
+    # Set the icon for the installer
+    set(CPACK_NSIS_MUI_ICON "${PROJECT_SOURCE_DIR}/resources/phoenix.ico")
+    set(CPACK_NSIS_MUI_UNIICON "${PROJECT_SOURCE_DIR}/resources/phoenix.ico")
+
+    # Create a desktop shortcut
+    set(CPACK_NSIS_CREATE_ICONS_EXTRA
+            "CreateShortCut '$DESKTOP\\\\Phoenix.lnk' '$INSTDIR\\\\bin\\\\phoenix.exe'")
+    set(CPACK_NSIS_DELETE_ICONS_EXTRA
+            "Delete '$DESKTOP\\\\Phoenix.lnk'")
+
+    # Add/Remove programs info
+    set(CPACK_NSIS_DISPLAY_NAME "Phoenix")
+    set(CPACK_NSIS_PACKAGE_NAME "Phoenix")
+    set(CPACK_NSIS_UNINSTALL_NAME "Uninstall Phoenix")
+
+    # Install the icon
+    install(FILES ${PROJECT_SOURCE_DIR}/resources/phoenix.ico DESTINATION bin)
     # Install the main executable
-    install(TARGETS ${EXECUTABLE_NAME} DESTINATION bin)
+    install(FILES ${CMAKE_BINARY_DIR}/bin/Debug/${EXECUTABLE_NAME}.exe
+            DESTINATION bin
+            PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+            GROUP_EXECUTE GROUP_READ
+            WORLD_EXECUTE WORLD_READ
+    )
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/Debug/ DESTINATION bin)
+
+
 
     # Install any additional DLLs or resources
     # install(FILES ${PROJECT_SOURCE_DIR}/path/to/additional/dll DESTINATION bin)
