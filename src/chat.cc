@@ -3,7 +3,6 @@
 #include "utils.h"
 #include "parse_json.h"
 #include "chat_manager.h"
-#include "web_server.h"
 #include "database_manager.h"
 #include "directory_manager.h"
 
@@ -13,26 +12,10 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
-#include <chrono>
-
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/asio.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <nlohmann/json.hpp>
-#include <iostream>
-#include <deque>
-#include <functional>
-
-//////////////////////////////////////////////////////////////////////////
-////////////                    ANIMATION                     ////////////
-//////////////////////////////////////////////////////////////////////////
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace net = boost::asio;
-using tcp = boost::asio::ip::tcp;
 
 std::atomic<bool> stop_display{false};
+std::string answer = "";
+LLModel *global_model = nullptr;
 
 // Function to display animation frames
 void display_frames() {
@@ -67,14 +50,6 @@ void display_loading() {
     std::cout << "\r" << " " << std::flush;
 }
 
-//////////////////////////////////////////////////////////////////////////
-////////////                   /ANIMATION                     ////////////
-//////////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////
-////////////                 CHAT FUNCTIONS                   ////////////
-//////////////////////////////////////////////////////////////////////////
-
 // Function to get user input
 std::string get_input(ConsoleState &con_st, std::string &input, chatParams &params) {
     set_console_color(con_st, USER_INPUT);
@@ -89,13 +64,184 @@ std::string get_input(ConsoleState &con_st, std::string &input, chatParams &para
     return input;
 }
 
-std::string hashstring = "";
-std::string answer = "";
+// Function to initialize the model
+LLModel *
+initialize_model(const std::string &model_path, int n_ctx = 4096, int ngl = 100, const std::string &backend = "auto") {
+    LLModel::PromptContext prompt_context;
+    prompt_context.n_ctx = n_ctx;
 
-//////////////////////////////////////////////////////////////////////////
-////////////                /CHAT FUNCTIONS                   ////////////
-//////////////////////////////////////////////////////////////////////////
+    LLModel *model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
 
+#if defined(WIN32)
+    backend = "cuda";
+    if (backend == "cuda") {
+        auto devices = LLModel::Implementation::availableGPUDevices();
+        if (!devices.empty()) {
+            for (const auto& device : devices) {
+                //std::cout << "Found GPU: " << device.selectionName() << " with heap size: " << device.heapSize << std::endl;
+            }
+            // Example: Initialize the first available device
+            size_t memoryRequired = devices[0].heapSize;
+            const std::string& name = devices[0].name;
+            const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
+            auto devices = model->availableGPUDevices(memoryRequired);
+            for (const auto& device : devices) {
+                if (device.name == name && model->initializeGPUDevice(device.index)) {
+                    break;
+                }
+            }
+        }
+    }
+#endif
+
+    std::future<void> future;
+    stop_display = false;
+    future = std::async(std::launch::async, display_loading);
+
+    auto check_model = model->loadModel(model_path, prompt_context.n_ctx, ngl);
+    stop_display = true;
+    future.wait();
+
+    if (!check_model) {
+        std::cerr << "Error loading: " << model_path << std::endl;
+        delete model;
+        return nullptr;
+    }
+
+    std::cout << "\r" << APPNAME << ": done loading!" << std::flush;
+    model->setThreadCount(8);
+    return model;
+}
+
+// Function to handle a single conversation
+std::string handle_conversation(LLModel *model, const std::string &prompt_template, const std::string &prompt,
+                                const chatParams &params, bool is_api_call = false,
+                                std::function<void(const std::string &)> token_callback = nullptr) {
+    LLModel::PromptContext prompt_context;
+    prompt_context.n_ctx = 4096;
+
+    auto prompt_callback = [](int32_t token_id) { return true; };
+
+    auto response_callback = [&token_callback, is_api_call](int32_t token_id, const std::string &responsechars_str) {
+        if (!responsechars_str.empty()) {
+            if (is_api_call && token_callback) {
+                token_callback(responsechars_str);
+            } else {
+                std::cout << responsechars_str << std::flush;
+                answer += responsechars_str;
+            }
+        }
+        return true;
+    };
+
+    auto recalculate_callback = [](bool is_recalculating) { return is_recalculating; };
+
+    std::string unique_identifier = ChatManager::generate_unique_id();
+    ChatManager::create_chat_config_file(unique_identifier, params);
+
+    if (!params.b_token.empty()) {
+        answer += params.b_token;
+        if (!is_api_call) { std::cout << params.b_token; }
+    }
+
+    model->prompt(prompt, prompt_template, prompt_callback, response_callback, recalculate_callback, prompt_context,
+                  false, nullptr);
+
+    if (!params.e_token.empty()) {
+        if (!is_api_call) { std::cout << params.e_token; }
+        answer += params.e_token;
+    }
+
+    if (!params.save_log.empty()) {
+        save_chat_log(params.save_log, params.default_prefix + params.default_header + prompt + params.default_footer,
+                      answer);
+    }
+
+    std::string path = ChatManager::save_chat_history(unique_identifier, prompt, answer);
+
+    sqlite3 *db;
+    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
+        DatabaseManager::insert_chat_history(db, unique_identifier, path);
+        sqlite3_close(db);
+    } else {
+        std::cerr << "error in open db" << std::endl;
+    }
+
+    std::string response = answer;
+    answer.clear();
+    return response;
+}
+
+// Function to handle a conversation with chat history
+std::string handle_conversation(LLModel *model, const std::string &prompt_template,
+                                const std::vector<std::pair<std::string, std::string>> &chat_history,
+                                const chatParams &params, bool is_api_call = false,
+                                std::function<void(const std::string &)> token_callback = nullptr) {
+    LLModel::PromptContext prompt_context;
+    prompt_context.n_ctx = 4096;
+
+    // Convert chat history to a format the model can understand
+    std::string combined_prompt = prompt_template;
+    for (const auto &entry: chat_history) {
+        combined_prompt += "User: " + entry.second + "\n";
+        combined_prompt += "Assistant: " + entry.first + "\n";
+    }
+
+    auto prompt_callback = [](int32_t token_id) { return true; };
+
+    auto response_callback = [&token_callback, is_api_call](int32_t token_id, const std::string &responsechars_str) {
+        if (!responsechars_str.empty()) {
+            if (is_api_call && token_callback) {
+                token_callback(responsechars_str);
+            } else {
+                std::cout << responsechars_str << std::flush;
+                answer += responsechars_str;
+            }
+        }
+        return true;
+    };
+
+    auto recalculate_callback = [](bool is_recalculating) { return is_recalculating; };
+
+    std::string unique_identifier = ChatManager::generate_unique_id();
+    ChatManager::create_chat_config_file(unique_identifier, params);
+
+    if (!params.b_token.empty()) {
+        answer += params.b_token;
+        if (!is_api_call) { std::cout << params.b_token; }
+    }
+
+    model->prompt(combined_prompt, prompt_template, prompt_callback, response_callback, recalculate_callback,
+                  prompt_context, false, nullptr);
+
+    if (!params.e_token.empty()) {
+        if (!is_api_call) { std::cout << params.e_token; }
+        answer += params.e_token;
+    }
+
+    if (!params.save_log.empty()) {
+        save_chat_log(params.save_log,
+                      params.default_prefix + params.default_header + combined_prompt + params.default_footer, answer);
+    }
+
+    std::string path = ChatManager::save_chat_history(unique_identifier, combined_prompt, answer);
+
+    sqlite3 *db;
+    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
+        DatabaseManager::insert_chat_history(db, unique_identifier, path);
+        sqlite3_close(db);
+    } else {
+        std::cerr << "error in open db" << std::endl;
+    }
+
+    std::string response = answer;
+    answer.clear();
+    return response;
+}
+
+// Function to run the command-line interface
 int run_command(const std::string &prompt_template, const std::string &model_path) {
     ConsoleState con_st;
     con_st.use_color = true;
@@ -111,466 +257,86 @@ int run_command(const std::string &prompt_template, const std::string &model_pat
     chatParams params;
     params.model = model_path;
 
-    LLModel::PromptContext prompt_context;
-    prompt_context.n_ctx = 8192;
-    prompt_context.contextErase = 0.9f;
-
-    int ngl = 100;
-    std::string backend = "auto";
-
-    LLModel *model = nullptr;
-    model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
-
-
-#if defined(WIN32)
-    backend = "cuda";
-    if (backend == "cuda") {
-        auto devices = LLModel::Implementation::availableGPUDevices();
-        if (!devices.empty()) {
-            for (const auto& device : devices) {
-                //std::cout << "Found GPU: " << device.selectionName() << " with heap size: " << device.heapSize << std::endl;
-            }
-            // Example: Initialize the first available device
-            size_t memoryRequired = devices[0].heapSize;
-            const std::string& name = devices[0].name;
-            const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
-            auto devices = model->availableGPUDevices(memoryRequired);
-            for (const auto& device : devices) {
-                if (device.name == name && model->initializeGPUDevice(device.index)) {
-                    break;
-                }
-            }
+    if (!global_model) {
+        global_model = initialize_model(model_path);
+        if (!global_model) {
+            std::cout << "Press any key to exit..." << std::endl;
+            std::cin.get();
+            return 0;
         }
     }
-#endif
 
-    std::future<void> future;
-    stop_display = true;
-
-    if (params.use_animation) {
-        stop_display = false;
-        future = std::async(std::launch::async, display_loading);
-    }
-
-    auto check_model = model->loadModel(model_path, prompt_context.n_ctx, ngl);
-    if (!check_model) {
-        if (params.use_animation) {
-            stop_display = true;
-            future.wait();
-            stop_display = false;
-        }
-
-        std::cerr << "Error loading: " << params.model.c_str() << std::endl;
-        std::cout << "Press any key to exit..." << std::endl;
-        std::cin.get();
-        return 0;
-    } else {
-        if (params.use_animation) {
-            stop_display = true;
-            future.wait();
-        }
-        std::cout << "\r" << APPNAME << ": done loading!" << std::flush;
-    }
-
-    set_console_color(con_st, DEFAULT);
-
-    //////////////////////////////////////////////////////////////////////////
-    ////////////            PROMPT LAMBDA FUNCTIONS               ////////////
-    //////////////////////////////////////////////////////////////////////////
-
-    auto prompt_callback = [](int32_t token_id) {
-        // You can handle prompt here if needed
-        return true;
-    };
-
-    auto response_callback = [](int32_t token_id, const std::string responsechars_str) {
-        const char *responsechars = responsechars_str.c_str();
-
-        if (!(responsechars == nullptr || responsechars[0] == '\0')) {
-            // Stop the animation, printing response
-            if (!stop_display) {
-                stop_display = true;
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-                std::cerr << "\r" << " " << std::flush;
-                std::cerr << "\r" << std::flush;
-                if (!answer.empty()) { std::cout << answer; }
-            }
-
-            std::cout << responsechars << std::flush;
-            answer += responsechars;
-        }
-
-        return true;
-    };
-
-    auto recalculate_callback = [](bool is_recalculating) {
-        // You can handle recalculation requests here if needed
-        return is_recalculating;
-    };
-
-    //////////////////////////////////////////////////////////////////////////
-    ////////////         PROMPT TEXT AND GET RESPONSE             ////////////
-    //////////////////////////////////////////////////////////////////////////
-    model->setThreadCount(8);
     std::string input = "";
-
-    // Main chat loop
     while (true) {
         input = get_input(con_st, input, params);
-
-        std::string unique_identifier = ChatManager::generate_unique_id();
-        ChatManager::create_chat_config_file(unique_identifier, params);
-
-        if (params.use_animation) {
-            stop_display = false;
-            future = std::async(std::launch::async, display_frames);
-        }
-        if (!params.b_token.empty()) {
-            answer += params.b_token;
-            if (!params.use_animation) { std::cout << params.b_token; }
-        }
-        model->prompt(input, prompt_template,
-                      prompt_callback, response_callback, recalculate_callback, prompt_context, false, nullptr);
-
-        if (!params.e_token.empty()) {
-            std::cout << params.e_token;
-            answer += params.e_token;
-        }
-        if (params.use_animation) {
-            stop_display = true;
-            future.wait();
-            stop_display = false;
-        }
-        if (!params.save_log.empty()) {
-            save_chat_log(params.save_log, (params.default_prefix + params.default_header + input +
-                                            params.default_footer).c_str(), answer.c_str());
-        }
-
-        std::string path = ChatManager::save_chat_history(unique_identifier, input.c_str(), answer.c_str());
-        sqlite3 *db;
-        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-            DatabaseManager::insert_chat_history(db, unique_identifier, path);
-            sqlite3_close(db);
-        }
-
-        answer.clear(); // Clear the answer for the next prompt
+        handle_conversation(global_model, prompt_template, input, params);
     }
 
-    set_console_color(con_st, DEFAULT);
-    delete model;
     return 0;
 }
 
-
+// Function to chat with the API
 std::string
 chat_with_api(const std::string &prompt_template, const std::string &model_path, const std::string &prompt) {
-    ConsoleState con_st;
-    con_st.use_color = true;
-    set_console_color(con_st, DEFAULT);
-
-    set_console_color(con_st, PROMPT);
-    set_console_color(con_st, BOLD);
-    std::cout << APPNAME;
-    set_console_color(con_st, DEFAULT);
-    set_console_color(con_st, PROMPT);
-    std::cout << " (v. " << VERSION << ")\n\n";
-
     chatParams params;
     params.model = model_path;
 
-    LLModel::PromptContext prompt_context;
-    prompt_context.n_ctx = 4096;
-    int ngl = 100;
-    std::string backend = "auto";
-
-    LLModel *model = nullptr;
-    model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
-
-
-#if defined(WIN32)
-    backend = "cuda";
-    if (backend == "cuda") {
-        auto devices = LLModel::Implementation::availableGPUDevices();
-        if (!devices.empty()) {
-            for (const auto& device : devices) {
-                //std::cout << "Found GPU: " << device.selectionName() << " with heap size: " << device.heapSize << std::endl;
-            }
-            // Example: Initialize the first available device
-            size_t memoryRequired = devices[0].heapSize;
-            const std::string& name = devices[0].name;
-            const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
-            auto devices = model->availableGPUDevices(memoryRequired);
-            for (const auto& device : devices) {
-                if (device.name == name && model->initializeGPUDevice(device.index)) {
-                    break;
-                }
-            }
+    if (!global_model) {
+        global_model = initialize_model(model_path);
+        if (!global_model) {
+            return "Error: Failed to initialize model.";
         }
     }
-#endif
 
-
-    std::future<void> future;
-    stop_display = true;
-
-    if (params.use_animation) {
-        stop_display = false;
-        future = std::async(std::launch::async, display_loading);
-    }
-
-    auto check_model = model->loadModel(model_path, prompt_context.n_ctx, ngl);
-    if (!check_model) {
-        if (params.use_animation) {
-            stop_display = true;
-            future.wait();
-            stop_display = false;
-        }
-
-        std::cerr << "Error loading: " << params.model.c_str() << std::endl;
-        std::cout << "Press any key to exit..." << std::endl;
-        std::cin.get();
-        return "";
-    } else {
-        if (params.use_animation) {
-            stop_display = true;
-            future.wait();
-        }
-        std::cout << "\r" << APPNAME << ": done loading!" << std::flush;
-    }
-
-    set_console_color(con_st, DEFAULT);
-
-    //////////////////////////////////////////////////////////////////////////
-    ////////////            PROMPT LAMBDA FUNCTIONS               ////////////
-    //////////////////////////////////////////////////////////////////////////
-
-    auto prompt_callback = [](int32_t token_id) {
-        // You can handle prompt here if needed
-        return true;
-    };
-
-    auto response_callback = [](int32_t token_id, const std::string responsechars_str) {
-        const char *responsechars = responsechars_str.c_str();
-
-        if (!(responsechars == nullptr || responsechars[0] == '\0')) {
-            // Stop the animation, printing response
-            if (!stop_display) {
-                stop_display = true;
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-                std::cerr << "\r" << " " << std::flush;
-                std::cerr << "\r" << std::flush;
-                if (!answer.empty()) { std::cout << answer; }
-            }
-
-            std::cout << responsechars << std::flush;
-            answer += responsechars;
-        }
-
-        return true;
-    };
-
-    auto recalculate_callback = [](bool is_recalculating) {
-        // You can handle recalculation requests here if needed
-        return is_recalculating;
-    };
-
-    //////////////////////////////////////////////////////////////////////////
-    ////////////         PROMPT TEXT AND GET RESPONSE             ////////////
-    //////////////////////////////////////////////////////////////////////////
-    model->setThreadCount(8);
-
-    std::string unique_identifier = ChatManager::generate_unique_id();
-    ChatManager::create_chat_config_file(unique_identifier, params);
-
-    if (params.use_animation) {
-        stop_display = false;
-        future = std::async(std::launch::async, display_frames);
-    }
-    if (!params.b_token.empty()) {
-        answer += params.b_token;
-        if (!params.use_animation) { std::cout << params.b_token; }
-    }
-    model->prompt(prompt, prompt_template,
-                  prompt_callback, response_callback, recalculate_callback, prompt_context, false, nullptr);
-
-    if (!params.e_token.empty()) {
-        std::cout << params.e_token;
-        answer += params.e_token;
-    }
-    if (params.use_animation) {
-        stop_display = true;
-        future.wait();
-        stop_display = false;
-    }
-    if (!params.save_log.empty()) {
-        save_chat_log(params.save_log, params.default_prefix + params.default_header + prompt +
-                                       params.default_footer, answer);
-    }
-
-    std::string path = ChatManager::save_chat_history(unique_identifier, prompt, answer);
-
-    sqlite3 *db;
-    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-        DatabaseManager::insert_chat_history(db, unique_identifier, path);
-        sqlite3_close(db);
-    } else {
-        std::cerr << "error in open db" << std::endl;
-    }
-    std::string response = answer;
-    answer.clear(); // Clear the answer for the next prompt
-
-//    std::cout << "AI >>> " << response << std::endl;
-
-    set_console_color(con_st, DEFAULT);
-    return response;
+    return handle_conversation(global_model, prompt_template, prompt, params, true);
 }
 
-
+// Function to chat with the API and stream the response
 std::string
 chat_with_api_stream(const std::string &prompt_template, const std::string &model_path, const std::string &prompt,
                      std::function<void(const std::string &)> token_callback) {
-    ConsoleState con_st;
-    con_st.use_color = true;
-    set_console_color(con_st, DEFAULT);
-
-    set_console_color(con_st, PROMPT);
-    set_console_color(con_st, BOLD);
-    std::cout << APPNAME;
-    set_console_color(con_st, DEFAULT);
-    set_console_color(con_st, PROMPT);
-    std::cout << " (v. " << VERSION << ")\n\n";
-
     chatParams params;
     params.model = model_path;
 
-    LLModel::PromptContext prompt_context;
-    prompt_context.n_ctx = 4096;
-    int ngl = 100;
-    std::string backend = "auto";
-
-    LLModel *model = nullptr;
-    model = LLModel::Implementation::construct(model_path, backend, prompt_context.n_ctx);
-
-
-#if defined(WIN32)
-    backend = "cuda";
-    if (backend == "cuda") {
-        auto devices = LLModel::Implementation::availableGPUDevices();
-        if (!devices.empty()) {
-            for (const auto& device : devices) {
-                //std::cout << "Found GPU: " << device.selectionName() << " with heap size: " << device.heapSize << std::endl;
-            }
-            // Example: Initialize the first available device
-            size_t memoryRequired = devices[0].heapSize;
-            const std::string& name = devices[0].name;
-            const size_t requiredMemory = model->requiredMem(model_path, prompt_context.n_ctx, ngl);
-            auto devices = model->availableGPUDevices(memoryRequired);
-            for (const auto& device : devices) {
-                if (device.name == name && model->initializeGPUDevice(device.index)) {
-                    break;
-                }
-            }
+    if (!global_model) {
+        global_model = initialize_model(model_path);
+        if (!global_model) {
+            return "Error: Failed to initialize model.";
         }
     }
-#endif
 
+    return handle_conversation(global_model, prompt_template, prompt, params, true, token_callback);
+}
 
-    std::future<void> future;
-    stop_display = true;
+// Function to chat with the API using chat history
+std::string chat_with_api(const std::string &prompt_template, const std::string &model_path,
+                          const std::vector<std::pair<std::string, std::string>> &chat_history) {
+    chatParams params;
+    params.model = model_path;
 
-    if (params.use_animation) {
-        stop_display = false;
-        future = std::async(std::launch::async, display_loading);
-    }
-
-    auto check_model = model->loadModel(model_path, prompt_context.n_ctx, ngl);
-    if (!check_model) {
-        if (params.use_animation) {
-            stop_display = true;
-            future.wait();
-            stop_display = false;
+    if (!global_model) {
+        global_model = initialize_model(model_path);
+        if (!global_model) {
+            return "Error: Failed to initialize model.";
         }
+    }
 
-        std::cerr << "Error loading: " << params.model.c_str() << std::endl;
-        std::cout << "Press any key to exit..." << std::endl;
-        std::cin.get();
-        return "";
-    } else {
-        if (params.use_animation) {
-            stop_display = true;
-            future.wait();
+    return handle_conversation(global_model, prompt_template, chat_history, params, true);
+}
+
+// Function to chat with the API and stream the response using chat history
+std::string chat_with_api_stream(const std::string &prompt_template, const std::string &model_path,
+                                 const std::vector<std::pair<std::string, std::string>> &chat_history,
+                                 std::function<void(const std::string &)> token_callback) {
+    chatParams params;
+    params.model = model_path;
+
+    if (!global_model) {
+        global_model = initialize_model(model_path);
+        if (!global_model) {
+            return "Error: Failed to initialize model.";
         }
-        std::cout << "\r" << APPNAME << ": done loading!" << std::flush;
     }
 
-    set_console_color(con_st, DEFAULT);
-
-    //////////////////////////////////////////////////////////////////////////
-    ////////////            PROMPT LAMBDA FUNCTIONS               ////////////
-    //////////////////////////////////////////////////////////////////////////
-
-    auto prompt_callback = [](int32_t token_id) {
-        // You can handle prompt here if needed
-        return true;
-    };
-
-    auto response_callback = [token_callback](int32_t token_id, const std::string &responsechars_str) {
-        if (!responsechars_str.empty()) {
-//            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            token_callback(responsechars_str);
-        }
-        return true;
-    };
-
-    auto recalculate_callback = [](bool is_recalculating) {
-        // You can handle recalculation requests here if needed
-        return is_recalculating;
-    };
-
-    //////////////////////////////////////////////////////////////////////////
-    ////////////         PROMPT TEXT AND GET RESPONSE             ////////////
-    //////////////////////////////////////////////////////////////////////////
-    model->setThreadCount(8);
-
-    std::string unique_identifier = ChatManager::generate_unique_id();
-    ChatManager::create_chat_config_file(unique_identifier, params);
-
-    if (params.use_animation) {
-        stop_display = false;
-        future = std::async(std::launch::async, display_frames);
-    }
-    if (!params.b_token.empty()) {
-        if (!params.use_animation) { std::cout << params.b_token; }
-    }
-    model->prompt(prompt, prompt_template,
-                  prompt_callback, response_callback, recalculate_callback, prompt_context, false, nullptr);
-
-    if (!params.e_token.empty()) {
-        std::cout << params.e_token;
-    }
-    if (params.use_animation) {
-        stop_display = true;
-        future.wait();
-        stop_display = false;
-    }
-    if (!params.save_log.empty()) {
-        save_chat_log(params.save_log, params.default_prefix + params.default_header + prompt +
-                                       params.default_footer, answer);
-    }
-
-    std::string path = ChatManager::save_chat_history(unique_identifier, prompt, answer);
-
-    sqlite3 *db;
-    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-        DatabaseManager::insert_chat_history(db, unique_identifier, path);
-        sqlite3_close(db);
-    } else {
-        std::cerr << "error in open db" << std::endl;
-    }
-
-    set_console_color(con_st, DEFAULT);
-    return ""; // No need to return the final response here
+    return handle_conversation(global_model, prompt_template, chat_history, params, true, token_callback);
 }
