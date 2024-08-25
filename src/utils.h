@@ -3,11 +3,11 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "header.h" 
+#include "header.h"
 
 //Need this for Windows colors
 #ifdef _WIN32
-    #include <windows.h> 
+    #include <windows.h>
 #endif
 
 bool containsSubstring(const std::string &str, const std::string &substr) {
@@ -23,7 +23,7 @@ void check_avx_support_at_startup() {
     if (avx512 && avx && avx2 && fma) {std::cout << "Your computer supports AVX512" << std::endl;}
     else if (avx && avx2 && fma)      {std::cout << "Your computer supports AVX2" << std::endl;}
     else if (avx)                     {std::cout << "Your computer only supports AVX1" << std::endl;}
-    else                    {std::cout << "Your computer does not support AVX1 or AVX2\nThe program will likely not run." << std::endl;} 
+    else                    {std::cout << "Your computer does not support AVX1 or AVX2\nThe program will likely not run." << std::endl;}
     #ifdef OLD_MACOS
     std::cout << "Compiled with OLD_MACOS flag. /save and /load features turned off." << std::endl;
     #endif
@@ -86,7 +86,7 @@ std::tuple<std::string, std::string, std::string> read_prompt_template_file(cons
     } else {
         std::cerr << "Unable to open the prompt template file." << std::endl;
         std::cerr << "Reverting to default prompt template." << std::endl;
-        return std::make_tuple("### Instruction:\n The prompt below is a question to answer, a task to complete, or a conversation to respond to; decide which and write an appropriate response.", "\n### Prompt: ", "\n### Response: "); 
+        return std::make_tuple("### Instruction:\n The prompt below is a question to answer, a task to complete, or a conversation to respond to; decide which and write an appropriate response.", "\n### Prompt: ", "\n### Response: ");
     }
 
     //find line containing %1 and store its index.
@@ -106,7 +106,7 @@ std::tuple<std::string, std::string, std::string> read_prompt_template_file(cons
         header = lines[0];
         prefix = " ";
     } else {
-        
+
         //Put lines above the header-line into prefix.
         prefix = lines[0];
         for (size_t i = 1; i < input_index-1; ++i) {
@@ -163,7 +163,7 @@ void set_console_color(ConsoleState &con_st, ConsoleColor color) {
         #ifdef _WIN32
           WORD windows_colors[] = {
             7, 14, 10, 15
-        };          
+        };
             HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
             SetConsoleTextAttribute(hConsole, windows_colors[color]);
         #else
@@ -198,8 +198,8 @@ And to you, dear user!
 
 Happy chatting! :)
 )";
-std::cout << "\n\n" << APPNAME << " version " << VERSION << "\n\n" << "Made by kuvaus" << "\n\n" << mit_license << std::endl; 
-//std::cout << mit_license << std::endl; 
+std::cout << "\n\n" << APPNAME << " version " << VERSION << "\n\n" << "Made by kuvaus" << "\n\n" << mit_license << std::endl;
+//std::cout << mit_license << std::endl;
 }
 
 void print_usage(int argc, char** argv, const chatParams& params) {
@@ -256,7 +256,7 @@ void print_usage(int argc, char** argv, const chatParams& params) {
     fprintf(stderr, "\n");
 }
 
-bool parse_params(int argc, char** argv, chatParams& params) { 
+bool parse_params(int argc, char** argv, chatParams& params) {
 
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
@@ -315,7 +315,7 @@ bool parse_params(int argc, char** argv, chatParams& params) {
         } else if (arg == "--load_log") {
             params.load_log = argv[++i];
         } else if (arg == "--save_dir") {
-            params.save_dir = argv[++i];    
+            params.save_dir = argv[++i];
         } else if (arg == "--save_name") {
             params.save_name = argv[++i];
         } else if (arg == "-m" || arg == "--model") {
@@ -336,7 +336,7 @@ bool parse_params(int argc, char** argv, chatParams& params) {
     params.path = pathname_directory(argv[0]);
 	params.path.append("/");
 
-	
+
     return true;
 }
 
