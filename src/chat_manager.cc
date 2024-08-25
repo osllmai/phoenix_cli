@@ -39,7 +39,7 @@ std::string ChatManager::generate_unique_id() {
 }
 
 
-bool ChatManager::create_chat_config_file(const std::string &id, chatParams &params) {
+bool ChatManager::create_chat_config_file(const std::string &id, const chatParams &params) {
     // create chats directory
     DirectoryManager::create_chats_directory();
 
