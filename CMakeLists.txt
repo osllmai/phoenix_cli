@@ -14,7 +14,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Define project-related names
 set(LIBRARY_NAME Lib)
-set(EXECUTABLE_NAME phoenix)
+set(EXECUTABLE_NAME phoenix_cli)
 
 # CMake module path and submodules
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
@@ -198,7 +198,7 @@ elseif (WIN32)
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_NSIS_PACKAGE_NAME "Phoenix")
     set(CPACK_NSIS_DISPLAY_NAME "Phoenix")
-    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\phoenix.exe")
+    set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\${EXECUTABLE_NAME}.exe")
     set(CPACK_NSIS_HELP_LINK "http://www.yourcompany.com")
     set(CPACK_NSIS_URL_INFO_ABOUT "http://www.yourcompany.com")
     set(CPACK_NSIS_CONTACT "your.email@example.com")
@@ -210,7 +210,7 @@ elseif (WIN32)
 
     # Create a desktop shortcut
     set(CPACK_NSIS_CREATE_ICONS_EXTRA
-            "CreateShortCut '$DESKTOP\\\\Phoenix.lnk' '$INSTDIR\\\\bin\\\\phoenix.exe'")
+            "CreateShortCut '$DESKTOP\\\\Phoenix.lnk' '$INSTDIR\\\\bin\\\\${EXECUTABLE_NAME}.exe'")
     set(CPACK_NSIS_DELETE_ICONS_EXTRA
             "Delete '$DESKTOP\\\\Phoenix.lnk'")
 
