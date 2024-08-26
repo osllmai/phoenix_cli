@@ -41,10 +41,10 @@ integration and deployment in local environments.
 
 Before you begin, ensure that the following dependencies are installed:
 
-- **CMake** (version 3.15 or higher)
-- **Boost** (version 1.85 or higher, with `system` and `filesystem` components)
-- **SQLite3** (version X.X or higher)
-- **cURL** (version X.X or higher)
+- **CMake** 
+- **Boost** 
+- **SQLite3** 
+- **cURL** 
 - **CUDA** (version 11.0 or higher, if using GPU acceleration)
 - **Kumpute** (if needed for additional GPU computations)
 
