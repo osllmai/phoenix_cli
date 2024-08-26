@@ -1,0 +1,79 @@
+on run argv
+    set diskName to item 1 of argv
+    set appName to "@CPACK_PACKAGE_NAME@.app"
+
+    tell application "Finder"
+        set dmgFile to diskName
+        try
+            -- Wait for the disk image to be available
+            repeat with i from 1 to 30
+                if disk dmgFile exists then
+                    exit repeat
+                end if
+                delay 1
+            end repeat
+
+            if not (disk dmgFile exists) then
+                error "Disk image not found: " & dmgFile
+            end if
+
+            tell disk dmgFile
+                open
+
+                -- Wait for the window to be available
+                repeat with i from 1 to 30
+                    if exists window 1 then
+                        exit repeat
+                    end if
+                    delay 1
+                end repeat
+
+                set current view of container window to icon view
+                try
+                    set toolbar visible of container window to false
+                on error
+                    log "Warning: Could not set toolbar visibility"
+                end try
+                try
+                    set statusbar visible of container window to false
+                on error
+                    log "Warning: Could not set statusbar visibility"
+                end try
+                set the bounds of container window to {100, 100, 512, 384}
+                set theViewOptions to the icon view options of container window
+                set arrangement of theViewOptions to not arranged
+                set icon size of theViewOptions to 128
+                try
+                    set background picture of theViewOptions to file ".background:background.png"
+                on error
+                    log "Warning: Could not set background picture"
+                end try
+
+                -- Ensure the app exists before setting its position
+                if exists file appName then
+                    set position of item appName to {128, 192}
+                else
+                    log "Warning: " & appName & " not found in the disk image."
+                end if
+
+                -- Create Applications alias if it doesn't exist
+                if not (exists item "Applications") then
+                    make new alias file at container window to POSIX file "/Applications" with properties {name:"Applications"}
+                end if
+                try
+                    set position of item "Applications" of container window to {384, 192}
+                on error
+                    log "Warning: Could not set position of Applications alias"
+                end try
+
+                update without registering applications
+                delay 5
+                close
+            end tell
+
+        on error errStr number errorNumber
+            log "Error: " & errStr & " (Error " & errorNumber & ")"
+            error errStr
+        end try
+    end tell
+end run

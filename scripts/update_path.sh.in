@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# Check which shell is being used and update the appropriate profile
+SHELL_NAME=$(basename "$SHELL")
+
+if [ "$SHELL_NAME" = "zsh" ]; then
+    PROFILE_FILE="$HOME/.zshrc"
+elif [ "$SHELL_NAME" = "bash" ]; then
+    PROFILE_FILE="$HOME/.bash_profile"
+else
+    PROFILE_FILE="$HOME/.bashrc"
+fi
+
+# Add Phoenix binary path to the PATH if it's not already present
+if ! grep -q 'export PATH="$HOME/Phoenix.app/Contents/MacOS:$PATH"' "$PROFILE_FILE"; then
+    echo 'export PATH="$HOME/Phoenix.app/Contents/MacOS:$PATH"' >> "$PROFILE_FILE"
+    echo "Phoenix binary path added to $PROFILE_FILE"
+fi
