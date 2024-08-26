@@ -546,7 +546,7 @@ void show_commands(int argc, char **argv) {
                 return;
             }
         } else if (arg == "--version" || arg == "-v") {
-            std::cout << "Current version is 0.0.3" << std::endl;
+            std::cout << "Current version is " << VERSION << std::endl;
         } else if (arg == "list") {
             if (i + 1 < argc) {
                 handle_list_command(argv[i + 1]);
