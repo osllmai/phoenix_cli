@@ -9,7 +9,7 @@
 namespace models {
     class User {
     public:
-        static void create(const std::string &email, const std::string &password);
+        static int create(const std::string &email, const std::string &password);
 
         static bool authenticate(const std::string &email, const std::string &password);
 
