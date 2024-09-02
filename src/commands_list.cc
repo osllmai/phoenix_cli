@@ -4,7 +4,6 @@
 #include "directory_manager.h"
 #include "download_model.h"
 #include "models_list.h"
-#include "web_server.h"
 
 #include <atomic>
 #include <boost/asio.hpp>
@@ -27,6 +26,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <api/api.cc>
 
 namespace fs = std::filesystem;
 namespace beast = boost::beast;
@@ -504,8 +504,10 @@ void handle_show_command(const std::string &model_name) {
 void handle_serve_command(const std::string &model_name) {
     std::thread serv_thread(handle_server);
     std::thread run_model_thread(handle_run_command, model_name);
+//    std::thread endpoint_threads(endpoints);
     serv_thread.join();
     run_model_thread.join();
+//    endpoint_threads.join();
 }
 
 void show_commands(int argc, char **argv) {
@@ -616,7 +618,8 @@ void show_commands(int argc, char **argv) {
                     std::cout << "  ./phoenix serve [model_name]" << std::endl;
                     return;
                 }
-                handle_serve_command(argv[i + 1]);
+//                handle_serve_command(argv[i + 1]);
+                endpoints();
                 return;
             }
 
