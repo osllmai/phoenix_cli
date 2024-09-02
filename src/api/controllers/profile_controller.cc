@@ -12,30 +12,43 @@ namespace controllers {
         try {
             json request_body = json::parse(req.body);
 
-            if (!request_body) {
+            if (!request_body.is_object()) {
                 return crow::response(400, "Invalid JSON");
             }
 
-            UserProfile user_profile = models::Profile::get_by_id(request_body["user_id"]);
-            user_profile.bio = request_body["bio"].get<std::string>();
-            user_profile.has_onboarded = request_body["has_onboarded"].get<bool>();
-            user_profile.image_url = request_body["image_url"].get<std::string>();
-            user_profile.image_path = request_body["image_path"].get<std::string>();
-            user_profile.profile_context = request_body["profile_context"].get<std::string>();
-            user_profile.display_name = request_body["display_name"].get<std::string>();
-            user_profile.use_azure_openai = request_body["use_azure_openai"].get<bool>();
-            user_profile.username = request_body["username"].get<std::string>();
-            user_profile.anthropic_api_key = request_body["anthropic_api_key"].get<std::string>();
-            user_profile.azure_openai_35_turbo_id = request_body["azure_openai_35_turbo_id"].get<std::string>();
-            user_profile.azure_openai_45_turbo_id = request_body["azure_openai_45_turbo_id"].get<std::string>();
-            user_profile.azure_openai_45_vision_id = request_body["azure_openai_45_vision_id"].get<std::string>();
-            user_profile.azure_openai_api_key = request_body["azure_openai_api_key"].get<std::string>();
-            user_profile.azure_openai_endpoint = request_body["azure_openai_endpoint"].get<std::string>();
-            user_profile.google_gemini_api_key = request_body["google_gemini_api_key"].get<std::string>();
-            user_profile.mistral_api_key = request_body["mistral_api_key"].get<std::string>();
-            user_profile.openai_api_key = request_body["openai_api_key"].get<std::string>();
-            user_profile.openai_organization_id = request_body["openai_organization_id"].get<std::string>();
-            user_profile.perplexity_api_key = request_body["perplexity_api_key"].get<std::string>();
+            // Extract user ID to get the profile
+            std::string user_id = request_body.value("user_id", "");
+            if (user_id.empty()) {
+                return crow::response(400, "User ID is required");
+            }
+
+            UserProfile user_profile = models::Profile::get_by_id(user_id);
+
+            if (user_profile.user_id.empty()) {
+                return crow::response(404, "User Profile not found");
+            }
+
+            // Update fields with type checking and default values
+            user_profile.bio = request_body.value("bio", user_profile.bio);
+            user_profile.has_onboarded = request_body.value("has_onboarded", user_profile.has_onboarded);
+            user_profile.image_url = request_body.value("image_url", user_profile.image_url);
+            user_profile.image_path = request_body.value("image_path", user_profile.image_path);
+            user_profile.profile_context = request_body.value("profile_context", user_profile.profile_context);
+            user_profile.display_name = request_body.value("display_name", user_profile.display_name);
+            user_profile.use_azure_openai = request_body.value("use_azure_openai", user_profile.use_azure_openai);
+            user_profile.username = request_body.value("username", user_profile.username);
+            user_profile.anthropic_api_key = request_body.value("anthropic_api_key", user_profile.anthropic_api_key);
+            user_profile.azure_openai_35_turbo_id = request_body.value("azure_openai_35_turbo_id", user_profile.azure_openai_35_turbo_id);
+            user_profile.azure_openai_45_turbo_id = request_body.value("azure_openai_45_turbo_id", user_profile.azure_openai_45_turbo_id);
+            user_profile.azure_openai_45_vision_id = request_body.value("azure_openai_45_vision_id", user_profile.azure_openai_45_vision_id);
+            user_profile.azure_openai_api_key = request_body.value("azure_openai_api_key", user_profile.azure_openai_api_key);
+            user_profile.azure_openai_endpoint = request_body.value("azure_openai_endpoint", user_profile.azure_openai_endpoint);
+            user_profile.google_gemini_api_key = request_body.value("google_gemini_api_key", user_profile.google_gemini_api_key);
+            user_profile.mistral_api_key = request_body.value("mistral_api_key", user_profile.mistral_api_key);
+            user_profile.openai_api_key = request_body.value("openai_api_key", user_profile.openai_api_key);
+            user_profile.openai_organization_id = request_body.value("openai_organization_id", user_profile.openai_organization_id);
+            user_profile.perplexity_api_key = request_body.value("perplexity_api_key", user_profile.perplexity_api_key);
+
             models::Profile::update(user_profile);
 
             json response = {
@@ -45,12 +58,13 @@ namespace controllers {
 
         } catch (const json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
-            return crow::response(400, "JSON parsing error" + std::string(e.what()));
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
         } catch (const std::exception &e) {
             CROW_LOG_ERROR << "Exception during update profile: " << e.what();
-            return crow::response(400, "Exception during update profile" + std::string(e.what()));
+            return crow::response(400, "Exception during update profile: " + std::string(e.what()));
         }
     }
+
 
     crow::response get_by_user_id(const crow::request &req) {
         try {
