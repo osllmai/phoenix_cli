@@ -52,9 +52,12 @@ set(LIBRARY_SOURCES
         "api/api.cc"
         "api/models/database.cc"
         "api/models/user.cc"
+        "api/models/profile.cc"
         "api/controllers/auth_controller.cc"
         "api/controllers/streaming_controller.cc"
+        "api/controllers/profile_controller.cc"
         "api/routes/auth.cc"
+        "api/routes/profile.cc"
         "api/routes/streaming.cc"
 )
 
@@ -72,9 +75,12 @@ set(LIBRARY_HEADERS
         "api/include/crow_all.h"
         "api/include/models/database.h"
         "api/include/models/user.h"
+        "api/include/models/profile.h"
         "api/include/controllers/auth_controller.h"
+        "api/include/controllers/profile_controller.h"
         "api/include/controllers/streaming_controller.h"
         "api/include/routes/auth.h"
+        "api/include/routes/profile.h"
         "api/include/routes/streaming.h"
 )
 
