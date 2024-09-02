@@ -72,7 +72,20 @@ namespace controllers {
                 return crow::response(400, "Email and password are required");
             }
 
-            models::User::create(user["email"].get<std::string>(), user["password"].get<std::string>());
+            int user_id = models::User::create(user["email"].get<std::string>(), user["password"].get<std::string>());
+            std::string username = "user" + generate_random_number();
+            UserProfile user_profile(
+                    std::to_string(user_id),
+                    user.value("bio", ""),
+                    user.value("image_url", ""),
+                    user.value("image_path", ""),
+                    user.value("profile_context", ""),
+                    user.value("display_name", ""),
+                    user.value("use_azure_openai", false),
+                    user.value("username", username)
+            );
+
+            models::Profile::create(user_profile);
             return crow::response(201, "User created successfully");
         } catch (const json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
@@ -100,7 +113,7 @@ namespace controllers {
                 std::string access_token = create_jwt(email, false);
                 std::string refresh_token = create_jwt(email, true);
                 json response = {
-                        {"access_token", access_token},
+                        {"access_token",  access_token},
                         {"refresh_token", refresh_token},
                 };
                 return crow::response(200, response.dump());
@@ -141,10 +154,10 @@ namespace controllers {
             } else {
                 return crow::response(401, "Invalid refresh token");
             }
-        } catch (const json::exception  &e) {
+        } catch (const json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
             return crow::response(400, "Invalid JSON: " + std::string(e.what()));
-        } catch(const std::exception &e) {
+        } catch (const std::exception &e) {
             CROW_LOG_ERROR << "Error during refresh token: " << e.what();
             return crow::response(400, "Error during refresh token: " + std::string(e.what()));
         }
@@ -161,8 +174,8 @@ namespace controllers {
                 return crow::response(422, "email, old_password and new_password is required");
             }
 
-            if(models::User::authenticate(email, old_password)) {
-                if(models::User::reset_password(email, old_password, new_password)) {
+            if (models::User::authenticate(email, old_password)) {
+                if (models::User::reset_password(email, old_password, new_password)) {
                     return crow::response(200, "Your password changed successfully");
                 } else {
                     return crow::response(400, "Failed to change password");
@@ -170,7 +183,7 @@ namespace controllers {
             } else {
                 return crow::response(403, "Invalid credentials");
             }
-        } catch (const json::exception  &e) {
+        } catch (const json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
             return crow::response(400, "JSON parsing error: " + std::string(e.what()));
         } catch (const std::exception &e) {
