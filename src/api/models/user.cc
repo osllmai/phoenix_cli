@@ -3,10 +3,14 @@
 #include <sqlite_modern_cpp.h>
 
 namespace models {
-    void User::create(const std::string &email, const std::string &password) {
+    int User::create(const std::string &email, const std::string &password) {
+        int user_id = 0;
         db << "INSERT INTO users (email, password) VALUES (?, ?);"
            << email
            << password;
+
+        db << "SELECT last_insert_rowid();" >> user_id;
+        return user_id;
     }
 
     bool User::authenticate(const std::string &email, const std::string &password) {
