@@ -1,9 +1,13 @@
 #include "api/include/controllers/auth_controller.h"
 #include "api/include/models/user.h"
+#include "api/include/models/profile.h"
 #include "sqlite_modern_cpp/errors.h"
 #include <jwt-cpp/jwt.h>
 #include <nlohmann/json.hpp>
 #include <crow.h>
+#include <cstdlib>
+#include <ctime>
+#include <string>
 
 using json = nlohmann::json;
 
@@ -46,6 +50,19 @@ namespace controllers {
             CROW_LOG_ERROR << "JWT verification failed: " << e.what();
             return false;
         }
+    }
+
+    std::string generate_random_number(int length = 10) {
+        std::srand(std::time(0));
+        std::string username_number;
+        username_number += std::to_string((std::rand() % 9) + 1);
+
+        // Generate the remaining 9 digits
+        for (int i = 1; i < length; ++i) {
+            username_number += std::to_string(std::rand() % 10);
+        }
+
+        return username_number;
     }
 
     crow::response register_user(const crow::request &req) {
