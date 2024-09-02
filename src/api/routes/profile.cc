@@ -8,5 +8,9 @@ namespace routes {
             return controllers::update_profile(req);
         });
 
+        CROW_ROUTE(app, "/profile").methods("GET"_method)([](const crow::request &req){
+           return controllers::get_by_user_id(req);
+        });
+
     }
 }
