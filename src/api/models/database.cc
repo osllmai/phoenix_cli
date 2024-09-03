@@ -86,6 +86,40 @@ namespace models {
             db << "CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders (user_id);";
             db << "CREATE INDEX IF NOT EXISTS idx_folders_workspace_id ON folders (workspace_id);";
 
+            // Create files table
+            db << "CREATE TABLE IF NOT EXISTS files ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "description TEXT NOT NULL CHECK (length(description) <= 500),"
+                  "file_path TEXT NOT NULL CHECK (length(file_path) <= 1000),"
+                  "name TEXT NOT NULL CHECK (length(name) <= 100),"
+                  "size INTEGER NOT NULL,"
+                  "tokens INTEGER NOT NULL,"
+                  "type TEXT NOT NULL CHECK (length(type) <= 100)"
+                  ");";
+
+            // Create indexes for files
+            db << "CREATE INDEX IF NOT EXISTS files_user_id_idx ON files(user_id);";
+
+            // Create triggers for files
+//            db << "CREATE TRIGGER IF NOT EXISTS update_files_updated_at "
+//                  "BEFORE UPDATE ON files "
+//                  "FOR EACH ROW "
+//                  "BEGIN "
+//                  "UPDATE files SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id; "
+//                  "END;";
+//
+//            db << "CREATE TRIGGER IF NOT EXISTS delete_old_file "
+//                  "BEFORE DELETE ON files "
+//                  "FOR EACH ROW "
+//                  "BEGIN "
+//                  "SELECT delete_storage_object_from_bucket('files', OLD.file_path); "
+//                  "END;";
+
 
 
             std::cout << "Database initialized successfully." << std::endl;
