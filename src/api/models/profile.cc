@@ -24,7 +24,7 @@ namespace models {
               "openai_api_key, openai_organization_id, perplexity_api_key "
               "FROM profiles WHERE user_id = ?;"
            << user_id
-           >> [&](std::string id, std::string user_id, std::string created_at, std::string updated_at,
+           >> [&](int id, std::string user_id, std::string created_at, std::string updated_at,
                   std::string bio, int has_onboarded, std::string image_url, std::string image_path,
                   std::string profile_context, std::string display_name, int use_azure_openai,
                   std::string username, std::string anthropic_api_key, std::string azure_openai_35_turbo_id,

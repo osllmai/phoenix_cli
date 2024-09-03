@@ -38,15 +38,22 @@ namespace controllers {
             user_profile.use_azure_openai = request_body.value("use_azure_openai", user_profile.use_azure_openai);
             user_profile.username = request_body.value("username", user_profile.username);
             user_profile.anthropic_api_key = request_body.value("anthropic_api_key", user_profile.anthropic_api_key);
-            user_profile.azure_openai_35_turbo_id = request_body.value("azure_openai_35_turbo_id", user_profile.azure_openai_35_turbo_id);
-            user_profile.azure_openai_45_turbo_id = request_body.value("azure_openai_45_turbo_id", user_profile.azure_openai_45_turbo_id);
-            user_profile.azure_openai_45_vision_id = request_body.value("azure_openai_45_vision_id", user_profile.azure_openai_45_vision_id);
-            user_profile.azure_openai_api_key = request_body.value("azure_openai_api_key", user_profile.azure_openai_api_key);
-            user_profile.azure_openai_endpoint = request_body.value("azure_openai_endpoint", user_profile.azure_openai_endpoint);
-            user_profile.google_gemini_api_key = request_body.value("google_gemini_api_key", user_profile.google_gemini_api_key);
+            user_profile.azure_openai_35_turbo_id = request_body.value("azure_openai_35_turbo_id",
+                                                                       user_profile.azure_openai_35_turbo_id);
+            user_profile.azure_openai_45_turbo_id = request_body.value("azure_openai_45_turbo_id",
+                                                                       user_profile.azure_openai_45_turbo_id);
+            user_profile.azure_openai_45_vision_id = request_body.value("azure_openai_45_vision_id",
+                                                                        user_profile.azure_openai_45_vision_id);
+            user_profile.azure_openai_api_key = request_body.value("azure_openai_api_key",
+                                                                   user_profile.azure_openai_api_key);
+            user_profile.azure_openai_endpoint = request_body.value("azure_openai_endpoint",
+                                                                    user_profile.azure_openai_endpoint);
+            user_profile.google_gemini_api_key = request_body.value("google_gemini_api_key",
+                                                                    user_profile.google_gemini_api_key);
             user_profile.mistral_api_key = request_body.value("mistral_api_key", user_profile.mistral_api_key);
             user_profile.openai_api_key = request_body.value("openai_api_key", user_profile.openai_api_key);
-            user_profile.openai_organization_id = request_body.value("openai_organization_id", user_profile.openai_organization_id);
+            user_profile.openai_organization_id = request_body.value("openai_organization_id",
+                                                                     user_profile.openai_organization_id);
             user_profile.perplexity_api_key = request_body.value("perplexity_api_key", user_profile.perplexity_api_key);
 
             models::Profile::update(user_profile);

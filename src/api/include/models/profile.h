@@ -7,7 +7,7 @@
 #include <string>
 
 struct UserProfile {
-    std::string id;
+    int id;
     std::string user_id;
     std::string created_at;
     std::string updated_at;
@@ -33,7 +33,7 @@ struct UserProfile {
 
     // Default constructor
     UserProfile()
-            : id(""), user_id(""), created_at(""), updated_at(""), bio(""), has_onboarded(false),
+            : id(0), user_id(""), created_at(""), updated_at(""), bio(""), has_onboarded(false),
               image_url(""), image_path(""), profile_context(""), display_name(""), use_azure_openai(false),
               username(""), anthropic_api_key(""), azure_openai_35_turbo_id(""), azure_openai_45_turbo_id(""),
               azure_openai_45_vision_id(""), azure_openai_api_key(""), azure_openai_endpoint(""),
@@ -41,7 +41,7 @@ struct UserProfile {
               perplexity_api_key("") {}
 
     // Constructor with all fields
-    UserProfile(const std::string &id, const std::string &user_id, const std::string &created_at,
+    UserProfile(const int &id, const std::string &user_id, const std::string &created_at,
                 const std::string &updated_at, const std::string &bio, bool has_onboarded,
                 const std::string &image_url, const std::string &image_path, const std::string &profile_context,
                 const std::string &display_name, bool use_azure_openai, const std::string &username,

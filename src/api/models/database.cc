@@ -21,7 +21,7 @@ namespace models {
 
             // Create profiles table
             db << "CREATE TABLE IF NOT EXISTS profiles ("
-                  "id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),"
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                   "user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,"
                   "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                   "updated_at TEXT,"
@@ -45,6 +45,30 @@ namespace models {
                   "openai_organization_id TEXT CHECK (length(openai_organization_id) <= 1000),"
                   "perplexity_api_key TEXT CHECK (length(perplexity_api_key) <= 1000)"
                   ");";
+
+            // Create workspaces table
+            db << "CREATE TABLE IF NOT EXISTS workspaces ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "default_context_length INTEGER NOT NULL,"
+                  "default_model TEXT NOT NULL CHECK (length(default_model) <= 1000),"
+                  "default_prompt TEXT NOT NULL CHECK (length(default_prompt) <= 100000),"
+                  "default_temperature REAL NOT NULL,"
+                  "description TEXT NOT NULL CHECK (length(description) <= 500),"
+                  "embeddings_provider TEXT NOT NULL CHECK (length(embeddings_provider) <= 1000),"
+                  "include_profile_context INTEGER NOT NULL,"
+                  "include_workspace_instructions INTEGER NOT NULL,"
+                  "instructions TEXT NOT NULL CHECK (length(instructions) <= 1500),"
+                  "is_home INTEGER NOT NULL DEFAULT 0,"
+                  "name TEXT NOT NULL CHECK (length(name) <= 100)"
+                  ");";
+
+            // Create indexes
+            db << "CREATE INDEX IF NOT EXISTS idx_workspaces_user_id ON workspaces (user_id);";
+            db << "CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_home_workspace_per_user ON workspaces(user_id) WHERE is_home;";
 
             std::cout << "Database initialized successfully." << std::endl;
         } catch (const std::exception &e) {
