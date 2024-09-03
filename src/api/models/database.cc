@@ -70,6 +70,24 @@ namespace models {
             db << "CREATE INDEX IF NOT EXISTS idx_workspaces_user_id ON workspaces (user_id);";
             db << "CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_home_workspace_per_user ON workspaces(user_id) WHERE is_home;";
 
+            // Create folders table
+            db << "CREATE TABLE IF NOT EXISTS folders ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "name TEXT NOT NULL,"
+                  "description TEXT NOT NULL,"
+                  "type TEXT NOT NULL"
+                  ");";
+
+            // Create indexes for folders
+            db << "CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders (user_id);";
+            db << "CREATE INDEX IF NOT EXISTS idx_folders_workspace_id ON folders (workspace_id);";
+
+
+
             std::cout << "Database initialized successfully." << std::endl;
         } catch (const std::exception &e) {
             std::cerr << "Database initialization failed: " << e.what() << std::endl;
