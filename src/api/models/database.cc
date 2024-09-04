@@ -228,6 +228,46 @@ namespace models {
             db << "CREATE INDEX IF NOT EXISTS assistant_workspaces_assistant_id_idx ON assistant_workspaces(assistant_id);";
             db << "CREATE INDEX IF NOT EXISTS assistant_workspaces_workspace_id_idx ON assistant_workspaces(workspace_id);";
 
+            // Create chats table
+            db << "CREATE TABLE IF NOT EXISTS chats ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "assistant_id INTEGER REFERENCES assistants(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "context_length INT NOT NULL,"
+                  "description TEXT NOT NULL CHECK (length(description) <= 500),"
+                  "embeddings_provider TEXT NOT NULL CHECK (length(embeddings_provider) <= 1000),"
+                  "include_profile_context BOOLEAN NOT NULL,"
+                  "include_workspace_instructions BOOLEAN NOT NULL,"
+                  "model TEXT NOT NULL CHECK (length(model) <= 1000),"
+                  "name TEXT NOT NULL CHECK (length(name) <= 200),"
+                  "prompt TEXT NOT NULL CHECK (length(prompt) <= 100000),"
+                  "temperature REAL NOT NULL"
+                  ");";
+
+            // Create indexes for chats
+            db << "CREATE INDEX IF NOT EXISTS idx_chats_user_id ON chats (user_id);";
+            db << "CREATE INDEX IF NOT EXISTS idx_chats_workspace_id ON chats (workspace_id);";
+
+            db << "CREATE TABLE IF NOT EXISTS chat_files ("
+                  "user_id INTEGER NOT NULL,"
+                  "chat_id INTEGER NOT NULL,"
+                  "file_id INTEGER NOT NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "PRIMARY KEY(chat_id, file_id),"
+                  "FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,"
+                  "FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,"
+                  "FOREIGN KEY(file_id) REFERENCES files(id) ON DELETE CASCADE"
+                  ");";
+
+            // Create indexes for chat_files
+            db << "CREATE INDEX IF NOT EXISTS idx_chat_files_chat_id ON chat_files (chat_id);";
+
 
             std::cout << "Database initialized successfully." << std::endl;
         } catch (const sqlite::sqlite_exception &e) {

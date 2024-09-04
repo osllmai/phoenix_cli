@@ -10,6 +10,8 @@
 #include "api/include/routes/preset_workspace.h"
 #include "api/include/routes/assistant.h"
 #include "api/include/routes/assistant_workspace.h"
+#include "api/include/routes/chat.h"
+#include "api/include/routes/chat_file.h"
 #include "api/include/models/database.h"
 
 void endpoints() {
@@ -33,6 +35,8 @@ void endpoints() {
     routes::init_preset_workspace_routes(app);
     routes::init_assistant_routes(app);
     routes::init_assistant_workspace_routes(app);
+    routes::init_chat_routes(app);
+    routes::init_chat_file_routes(app);
 
     // Start the server
     app.port(18080).multithreaded().run();
