@@ -22,7 +22,7 @@ namespace models {
             // Create profiles table
             db << "CREATE TABLE IF NOT EXISTS profiles ("
                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                  "user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,"
+                  "user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,"
                   "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                   "updated_at TEXT,"
                   "bio TEXT NOT NULL CHECK (length(bio) <= 500),"
@@ -49,7 +49,7 @@ namespace models {
             // Create workspaces table
             db << "CREATE TABLE IF NOT EXISTS workspaces ("
                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
                   "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                   "updated_at TEXT,"
                   "sharing TEXT NOT NULL DEFAULT 'private',"
@@ -74,8 +74,8 @@ namespace models {
             // Create folders table
             db << "CREATE TABLE IF NOT EXISTS folders ("
                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
-                  "workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
                   "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                   "updated_at TEXT,"
                   "name TEXT NOT NULL,"
@@ -90,7 +90,7 @@ namespace models {
             // Create files table
             db << "CREATE TABLE IF NOT EXISTS files ("
                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
                   "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
                   "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                   "updated_at TEXT,"
@@ -121,11 +121,11 @@ namespace models {
                   "SELECT delete_storage_object_from_bucket('files', OLD.file_path); "
                   "END;";
 
-            // Include this in your database initialization function
+            // Create file_items table
             db << "CREATE TABLE IF NOT EXISTS file_items ("
                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                   "file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,"
-                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
                   "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                   "updated_at TEXT,"
                   "sharing TEXT NOT NULL DEFAULT 'private',"
@@ -135,9 +135,61 @@ namespace models {
                   "tokens INTEGER NOT NULL"
                   ");";
 
-            // Create indexes
+            // Create indexes for file_items
             db << "CREATE INDEX IF NOT EXISTS file_items_file_id_idx ON file_items(file_id);";
 
+            // Create presets table
+            db << "CREATE TABLE IF NOT EXISTS presets ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "context_length INTEGER NOT NULL,"
+                  "description TEXT NOT NULL CHECK (length(description) <= 500),"
+                  "embeddings_provider TEXT NOT NULL CHECK (length(embeddings_provider) <= 1000),"
+                  "include_profile_context BOOLEAN NOT NULL,"
+                  "include_workspace_instructions BOOLEAN NOT NULL,"
+                  "model TEXT NOT NULL CHECK (length(model) <= 1000),"
+                  "name TEXT NOT NULL CHECK (length(name) <= 100),"
+                  "prompt TEXT NOT NULL CHECK (length(prompt) <= 100000),"
+                  "temperature REAL NOT NULL"
+                  ");";
+
+            // Create indexes for presets
+            db << "CREATE INDEX IF NOT EXISTS presets_user_id_idx ON presets(user_id);";
+
+            // Create triggers for presets
+            db << "CREATE TRIGGER IF NOT EXISTS update_presets_updated_at "
+                  "BEFORE UPDATE ON presets "
+                  "FOR EACH ROW "
+                  "BEGIN "
+                  "UPDATE presets SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id; "
+                  "END;";
+
+            // Create preset_workspaces table
+            db << "CREATE TABLE IF NOT EXISTS preset_workspaces ("
+                  "user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "preset_id INTEGER NOT NULL REFERENCES presets(id) ON DELETE CASCADE,"
+                  "workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "PRIMARY KEY(preset_id, workspace_id)"
+                  ");";
+
+            // Create indexes for preset_workspaces
+            db << "CREATE INDEX IF NOT EXISTS preset_workspaces_user_id_idx ON preset_workspaces(user_id);";
+            db << "CREATE INDEX IF NOT EXISTS preset_workspaces_preset_id_idx ON preset_workspaces(preset_id);";
+            db << "CREATE INDEX IF NOT EXISTS preset_workspaces_workspace_id_idx ON preset_workspaces(workspace_id);";
+
+            // Create triggers for preset_workspaces
+            db << "CREATE TRIGGER IF NOT EXISTS update_preset_workspaces_updated_at "
+                  "BEFORE UPDATE ON preset_workspaces "
+                  "FOR EACH ROW "
+                  "BEGIN "
+                  "UPDATE preset_workspaces SET updated_at = CURRENT_TIMESTAMP WHERE user_id = OLD.user_id; "
+                  "END;";
 
             std::cout << "Database initialized successfully." << std::endl;
         } catch (const std::exception &e) {
