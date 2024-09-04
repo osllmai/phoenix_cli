@@ -68,8 +68,7 @@ namespace models {
 
             // Create indexes
             db << "CREATE INDEX IF NOT EXISTS idx_workspaces_user_id ON workspaces (user_id);";
-            db
-                    << "CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_home_workspace_per_user ON workspaces(user_id) WHERE is_home;";
+            db << "CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_home_workspace_per_user ON workspaces(user_id) WHERE is_home;";
 
             // Create folders table
             db << "CREATE TABLE IF NOT EXISTS folders ("
@@ -191,7 +190,50 @@ namespace models {
                   "UPDATE preset_workspaces SET updated_at = CURRENT_TIMESTAMP WHERE user_id = OLD.user_id; "
                   "END;";
 
+            // Create assistants table
+            db << "CREATE TABLE IF NOT EXISTS assistants ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
+                  "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at DATETIME,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "context_length INTEGER NOT NULL,"
+                  "description TEXT NOT NULL CHECK (length(description) <= 500),"
+                  "embeddings_provider TEXT NOT NULL CHECK (length(embeddings_provider) <= 1000),"
+                  "include_profile_context BOOLEAN NOT NULL,"
+                  "include_workspace_instructions BOOLEAN NOT NULL,"
+                  "model TEXT NOT NULL CHECK (length(model) <= 1000),"
+                  "name TEXT NOT NULL CHECK (length(name) <= 100),"
+                  "image_path TEXT NOT NULL CHECK (length(image_path) <= 1000),"
+                  "prompt TEXT NOT NULL CHECK (length(prompt) <= 100000),"
+                  "temperature REAL NOT NULL"
+                  ");";
+
+            // Create indexes for assistants
+            db << "CREATE INDEX IF NOT EXISTS assistants_user_id_idx ON assistants(user_id);";
+
+            // Create assistant_workspaces table
+            db << "CREATE TABLE IF NOT EXISTS assistant_workspaces ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "assistant_id INTEGER NOT NULL REFERENCES assistants(id) ON DELETE CASCADE,"
+                  "workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at DATETIME,"
+                  "PRIMARY KEY(assistant_id, workspace_id)"
+                  ");";
+
+            // Create indexes for assistant_workspaces
+            db << "CREATE INDEX IF NOT EXISTS assistant_workspaces_user_id_idx ON assistant_workspaces(user_id);";
+            db << "CREATE INDEX IF NOT EXISTS assistant_workspaces_assistant_id_idx ON assistant_workspaces(assistant_id);";
+            db << "CREATE INDEX IF NOT EXISTS assistant_workspaces_workspace_id_idx ON assistant_workspaces(workspace_id);";
+
+
             std::cout << "Database initialized successfully." << std::endl;
+        } catch (const sqlite::sqlite_exception &e) {
+            std::cerr << "Database initialization failed: " << e.what() << std::endl;
+            std::cerr << "Error code: " << e.get_code() << std::endl;
+            exit(1);
         } catch (const std::exception &e) {
             std::cerr << "Database initialization failed: " << e.what() << std::endl;
             exit(1);

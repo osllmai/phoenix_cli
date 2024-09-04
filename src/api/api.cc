@@ -8,6 +8,7 @@
 #include "api/include/routes/file_item.h"
 #include "api/include/routes/preset.h"
 #include "api/include/routes/preset_workspace.h"
+#include "api/include/routes/assistant.h"
 #include "api/include/models/database.h"
 
 void endpoints() {
@@ -29,6 +30,7 @@ void endpoints() {
     routes::init_file_item_routes(app);
     routes::init_preset_routes(app);
     routes::init_preset_workspace_routes(app);
+    routes::init_assistant_routes(app);
 
     // Start the server
     app.port(18080).multithreaded().run();
