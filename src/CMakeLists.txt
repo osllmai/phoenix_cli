@@ -61,6 +61,7 @@ set(LIBRARY_SOURCES
         "api/models/preset.cc"
         "api/models/preset_workspace.cc"
         "api/models/assistant.cc"
+        "api/models/assistant_workspace.cc"
         "api/controllers/auth_controller.cc"
         "api/controllers/workspace_controller.cc"
         "api/controllers/folder_controller.cc"
@@ -71,6 +72,7 @@ set(LIBRARY_SOURCES
         "api/controllers/streaming_controller.cc"
         "api/controllers/profile_controller.cc"
         "api/controllers/assistant_controller.cc"
+        "api/controllers/assistant_workspace_controller.cc"
         "api/routes/auth.cc"
         "api/routes/workspace.cc"
         "api/routes/profile.cc"
@@ -80,6 +82,7 @@ set(LIBRARY_SOURCES
         "api/routes/preset.cc"
         "api/routes/preset_workspace.cc"
         "api/routes/assistant.cc"
+        "api/routes/assistant_workspace.cc"
         "api/routes/streaming.cc"
 )
 
@@ -106,6 +109,7 @@ set(LIBRARY_HEADERS
         "api/include/models/preset.h"
         "api/include/models/preset_workspace.h"
         "api/include/models/assistant.h"
+        "api/include/models/assistant_workspace.h"
         "api/include/controllers/auth_controller.h"
         "api/include/controllers/profile_controller.h"
         "api/include/controllers/streaming_controller.h"
@@ -116,6 +120,7 @@ set(LIBRARY_HEADERS
         "api/include/controllers/preset_workspace_controller.h"
         "api/include/controllers/workspace_controller.h"
         "api/include/controllers/assistant_controller.h"
+        "api/include/controllers/assistant_workspace_controller.h"
         "api/include/routes/auth.h"
         "api/include/routes/profile.h"
         "api/include/routes/workspace.h"
@@ -125,6 +130,7 @@ set(LIBRARY_HEADERS
         "api/include/routes/preset.h"
         "api/include/routes/preset_workspace.h"
         "api/include/routes/assistant.h"
+        "api/include/routes/assistant_workspace.h"
         "api/include/routes/streaming.h"
 )
 
