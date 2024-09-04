@@ -58,12 +58,14 @@ set(LIBRARY_SOURCES
         "api/models/file.cc"
         "api/models/file_item.cc"
         "api/models/preset.cc"
+        "api/models/preset_workspace.cc"
         "api/controllers/auth_controller.cc"
         "api/controllers/workspace_controller.cc"
         "api/controllers/folder_controller.cc"
         "api/controllers/file_controller.cc"
         "api/controllers/file_item_controller.cc"
         "api/controllers/preset_controller.cc"
+        "api/controllers/preset_workspace_controller.cpp"
         "api/controllers/streaming_controller.cc"
         "api/controllers/profile_controller.cc"
         "api/routes/auth.cc"
@@ -73,6 +75,7 @@ set(LIBRARY_SOURCES
         "api/routes/file.cc"
         "api/routes/file_item.cc"
         "api/routes/preset.cc"
+        "api/routes/preset_workspace.cc"
         "api/routes/streaming.cc"
 )
 
@@ -96,6 +99,7 @@ set(LIBRARY_HEADERS
         "api/include/models/file_item.h"
         "api/include/models/profile.h"
         "api/include/models/preset.h"
+        "api/include/models/preset_workspace.h"
         "api/include/controllers/auth_controller.h"
         "api/include/controllers/profile_controller.h"
         "api/include/controllers/streaming_controller.h"
@@ -103,6 +107,7 @@ set(LIBRARY_HEADERS
         "api/include/controllers/file_controller.h"
         "api/include/controllers/file_item_controller.h"
         "api/include/controllers/preset_controller.h"
+        "api/include/controllers/preset_workspace_controller.h"
         "api/include/controllers/workspace_controller.h"
         "api/include/routes/auth.h"
         "api/include/routes/profile.h"
@@ -111,6 +116,7 @@ set(LIBRARY_HEADERS
         "api/include/routes/file.h"
         "api/include/routes/file_item.h"
         "api/include/routes/preset.h"
+        "api/include/routes/preset_workspace.h"
         "api/include/routes/streaming.h"
 )
 
