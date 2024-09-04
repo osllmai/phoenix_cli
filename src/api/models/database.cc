@@ -68,7 +68,8 @@ namespace models {
 
             // Create indexes
             db << "CREATE INDEX IF NOT EXISTS idx_workspaces_user_id ON workspaces (user_id);";
-            db << "CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_home_workspace_per_user ON workspaces(user_id) WHERE is_home;";
+            db
+                    << "CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_home_workspace_per_user ON workspaces(user_id) WHERE is_home;";
 
             // Create folders table
             db << "CREATE TABLE IF NOT EXISTS folders ("
@@ -106,20 +107,36 @@ namespace models {
             db << "CREATE INDEX IF NOT EXISTS files_user_id_idx ON files(user_id);";
 
             // Create triggers for files
-//            db << "CREATE TRIGGER IF NOT EXISTS update_files_updated_at "
-//                  "BEFORE UPDATE ON files "
-//                  "FOR EACH ROW "
-//                  "BEGIN "
-//                  "UPDATE files SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id; "
-//                  "END;";
-//
-//            db << "CREATE TRIGGER IF NOT EXISTS delete_old_file "
-//                  "BEFORE DELETE ON files "
-//                  "FOR EACH ROW "
-//                  "BEGIN "
-//                  "SELECT delete_storage_object_from_bucket('files', OLD.file_path); "
-//                  "END;";
+            db << "CREATE TRIGGER IF NOT EXISTS update_files_updated_at "
+                  "BEFORE UPDATE ON files "
+                  "FOR EACH ROW "
+                  "BEGIN "
+                  "UPDATE files SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id; "
+                  "END;";
 
+            db << "CREATE TRIGGER IF NOT EXISTS delete_old_file "
+                  "BEFORE DELETE ON files "
+                  "FOR EACH ROW "
+                  "BEGIN "
+                  "SELECT delete_storage_object_from_bucket('files', OLD.file_path); "
+                  "END;";
+
+            // Include this in your database initialization function
+            db << "CREATE TABLE IF NOT EXISTS file_items ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "content TEXT NOT NULL,"
+                  "local_embedding TEXT,"
+                  "openai_embedding TEXT,"
+                  "tokens INTEGER NOT NULL"
+                  ");";
+
+            // Create indexes
+            db << "CREATE INDEX IF NOT EXISTS file_items_file_id_idx ON file_items(file_id);";
 
 
             std::cout << "Database initialized successfully." << std::endl;

@@ -5,6 +5,7 @@
 #include "api/include/routes/workspace.h"
 #include "api/include/routes/folder.h"
 #include "api/include/routes/file.h"
+#include "api/include/routes/file_item.h"
 #include "api/include/models/database.h"
 
 void endpoints() {
@@ -23,6 +24,7 @@ void endpoints() {
     routes::init_workspace_routes(app);
     routes::init_folder_routes(app);
     routes::init_file_routes(app);
+    routes::init_file_item_routes(app);
 
     // Start the server
     app.port(18080).multithreaded().run();
