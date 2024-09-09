@@ -10,6 +10,10 @@ using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_prompt_workspace(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
@@ -17,24 +21,29 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
-            if (user_id.empty()) {
-                return crow::response(400, "User ID is required");
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
+
+                // Extract user ID to get the profile
+                std::string user_id = *user_id_opt;
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID is required");
+                }
+
+                UserPromptWorkspace prompt_workspace;
+                prompt_workspace.user_id = user_id;
+                prompt_workspace.prompt_id = request_body.value("prompt_id", 0);
+                prompt_workspace.workspace_id = request_body.value("workspace_id", 0);
+                prompt_workspace.created_at = get_current_time();
+                prompt_workspace.updated_at = get_current_time();
+
+                models::PromptWorkspace::create_prompt_workspace(prompt_workspace);
+
+                json response = {
+                        {"message", "Prompt workspace created"}
+                };
+                return crow::response(201, response.dump());
             }
-
-            UserPromptWorkspace prompt_workspace;
-            prompt_workspace.user_id = user_id;
-            prompt_workspace.prompt_id = request_body.value("prompt_id", 0);
-            prompt_workspace.workspace_id = request_body.value("workspace_id", 0);
-            prompt_workspace.created_at = get_current_time();
-            prompt_workspace.updated_at = get_current_time();
-
-            models::PromptWorkspace::create_prompt_workspace(prompt_workspace);
-
-            json response = {
-                    {"message", "Prompt workspace created"}
-            };
-            return crow::response(201, response.dump());
 
         } catch (json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
@@ -46,25 +55,35 @@ namespace controllers {
     }
 
     crow::response get_prompt_workspaces(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
-            std::string user_id = request_body.value("user_id", "");
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
 
-            if (user_id.empty()) {
-                return crow::response(400, "User ID must be provided");
+                // Extract user ID to get the profile
+                std::string user_id = *user_id_opt;
+
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID must be provided");
+                }
+
+                std::vector<UserPromptWorkspace> prompt_workspaces = models::PromptWorkspace::prompt_workspaces(
+                        user_id);
+
+                json prompt_workspaces_json = json::array();
+                for (const auto &prompt_workspace: prompt_workspaces) {
+                    json prompt_workspace_json;
+                    models::PromptWorkspace::to_json(prompt_workspace_json, prompt_workspace);
+                    prompt_workspaces_json.push_back(prompt_workspace_json);
+                }
+
+                return crow::response(200, prompt_workspaces_json.dump());
             }
-
-            std::vector<UserPromptWorkspace> prompt_workspaces = models::PromptWorkspace::prompt_workspaces(user_id);
-
-            json prompt_workspaces_json = json::array();
-            for (const auto &prompt_workspace: prompt_workspaces) {
-                json prompt_workspace_json;
-                models::PromptWorkspace::to_json(prompt_workspace_json, prompt_workspace);
-                prompt_workspaces_json.push_back(prompt_workspace_json);
-            }
-
-            return crow::response(200, prompt_workspaces_json.dump());
         } catch (json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
             return crow::response(400, "JSON parsing error: " + std::string(e.what()));
@@ -75,6 +94,10 @@ namespace controllers {
     }
 
     crow::response delete_prompt_workspace(const crow::request &req, const int &prompt_id, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             if (models::PromptWorkspace::delete_prompt_workspace(prompt_id, workspace_id)) {
                 return crow::response(204, "");
@@ -92,22 +115,31 @@ namespace controllers {
     }
 
     crow::response update_prompt_workspace(const crow::request &req, const int &prompt_id, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
-            UserPromptWorkspace prompt_workspace = models::PromptWorkspace::get_prompt_workspace_by_id(prompt_id, workspace_id);
+            UserPromptWorkspace prompt_workspace = models::PromptWorkspace::get_prompt_workspace_by_id(prompt_id,
+                                                                                                       workspace_id);
 
             if (prompt_workspace.user_id.empty()) {
                 return crow::response(404, "Prompt workspace not found");
             }
 
-            prompt_workspace.user_id = request_body.value("user_id", prompt_workspace.user_id);
-            prompt_workspace.updated_at = get_current_time();
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
 
-            if (models::PromptWorkspace::update_prompt_workspace(prompt_id, workspace_id, prompt_workspace)) {
-                return crow::response(200, "prompt workspace updated");
-            } else {
-                return crow::response(400, "prompt workspace not updated");
+                prompt_workspace.user_id = *user_id_opt;
+                prompt_workspace.updated_at = get_current_time();
+
+                if (models::PromptWorkspace::update_prompt_workspace(prompt_id, workspace_id, prompt_workspace)) {
+                    return crow::response(200, "prompt workspace updated");
+                } else {
+                    return crow::response(400, "prompt workspace not updated");
+                }
             }
 
         } catch (json::exception &e) {
@@ -120,7 +152,13 @@ namespace controllers {
     }
 
     crow::response get_prompt_workspace_by_id(const crow::request &req, const int &prompt_id, const int &workspace_id) {
-        UserPromptWorkspace prompt_workspace = models::PromptWorkspace::get_prompt_workspace_by_id(prompt_id, workspace_id);
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        UserPromptWorkspace prompt_workspace = models::PromptWorkspace::get_prompt_workspace_by_id(prompt_id,
+                                                                                                   workspace_id);
 
         if (prompt_workspace.user_id.empty()) {
             return crow::response(404, "prompt workspace not found");

@@ -1,5 +1,6 @@
 #include "api/include/controllers/folder_controller.h"
 #include "api/include/models/folder.h"
+#include "api/include/utils/utils.h"
 
 #include <crow.h>
 #include <nlohmann/json.hpp>
@@ -10,6 +11,11 @@ using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_folder(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -17,7 +23,8 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
             int workspace_id = request_body.value("workspace_id", 0);
 
             if (user_id.empty() || workspace_id == 0) {
@@ -47,6 +54,11 @@ namespace controllers {
     }
 
     crow::response update_folder(const int &folder_id, const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -77,6 +89,11 @@ namespace controllers {
     }
 
     crow::response delete_folder(const int &folder_id, const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             UserFolder user_folder = models::Folder::get_folder_by_id(folder_id);
 
@@ -100,6 +117,11 @@ namespace controllers {
     }
 
     crow::response get_folders_by_id(const int &folder_id, const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             UserFolder user_folder = models::Folder::get_folder_by_id(folder_id);
 
@@ -122,10 +144,16 @@ namespace controllers {
     }
 
     crow::response get_folders_by_user_id(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             std::vector<UserFolder> folders;
-            json request_body = json::parse(req.body);
-            std::string user_id = request_body.value("user_id", "");
+
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
             if (user_id.empty()) {
                 return crow::response(422, "User id must sent");
@@ -155,6 +183,11 @@ namespace controllers {
     }
 
     crow::response get_folders_by_workspace_id(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             std::vector<UserFolder> folders;
             json request_body = json::parse(req.body);

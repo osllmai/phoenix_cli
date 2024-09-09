@@ -4,9 +4,6 @@
 
 #include <crow.h>
 #include <nlohmann/json.hpp>
-#include <chrono>
-#include <iomanip>
-#include <sstream>
 #include <string>
 
 using json = nlohmann::json;
@@ -14,6 +11,11 @@ using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_collection_workspace(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -21,7 +23,9 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
             if (user_id.empty()) {
                 return crow::response(400, "User ID is required");
             }
@@ -50,10 +54,14 @@ namespace controllers {
     }
 
     crow::response get_collection_workspaces(const crow::request &req) {
-        try {
-            json request_body = json::parse(req.body);
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
 
-            std::string user_id = request_body.value("user_id", "");
+        try {
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
             if (user_id.empty()) {
                 return crow::response(400, "User ID must be provided");
@@ -81,6 +89,11 @@ namespace controllers {
 
     crow::response
     delete_collection_workspace(const crow::request &req, const int &collection_id, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             if (models::CollectionWorkspace::delete_collection_workspace(collection_id, workspace_id)) {
                 return crow::response(204, "");
@@ -99,6 +112,11 @@ namespace controllers {
 
     crow::response
     update_collection_workspace(const crow::request &req, const int &collection_id, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -108,8 +126,8 @@ namespace controllers {
             if (collection_workspace.user_id.empty()) {
                 return crow::response(404, "Collection workspace not found");
             }
-
-            collection_workspace.user_id = request_body.value("user_id", collection_workspace.user_id);
+            auto get_user_id = get_user_id_from_token(auth_header);
+            collection_workspace.user_id = *get_user_id;
             collection_workspace.updated_at = get_current_time();
 
             if (models::CollectionWorkspace::update_collection_workspace(collection_id, workspace_id,
@@ -130,6 +148,11 @@ namespace controllers {
 
     crow::response
     get_collection_workspace_by_id(const crow::request &req, const int &collection_id, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         UserCollectionWorkspace collection_workspace = models::CollectionWorkspace::get_collection_workspace_by_id(
                 collection_id, workspace_id);
 

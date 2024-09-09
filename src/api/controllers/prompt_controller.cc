@@ -4,15 +4,16 @@
 
 #include <crow.h>
 #include <nlohmann/json.hpp>
-#include <chrono>
-#include <iomanip>
-#include <sstream>
 #include <string>
 
 using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_prompt(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
@@ -20,26 +21,31 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
-            if (user_id.empty()) {
-                return crow::response(400, "User ID is required");
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
+
+                // Extract user ID to get the profile
+                std::string user_id = *user_id_opt;
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID is required");
+                }
+
+                UserPrompt user_prompt;
+                user_prompt.user_id = user_id;
+                user_prompt.folder_id = request_body.value("folder_id", 0);
+                user_prompt.content = request_body.value("content", "");
+                user_prompt.name = request_body.value("name", "");
+                user_prompt.sharing = request_body.value("sharing", "private");
+                user_prompt.created_at = get_current_time();
+                user_prompt.updated_at = get_current_time();
+
+                models::Prompt::create_prompt(user_prompt);
+
+                json response = {
+                        {"message", "Prompt created"}
+                };
+                return crow::response(201, response.dump());
             }
-
-            UserPrompt user_prompt;
-            user_prompt.user_id = user_id;
-            user_prompt.folder_id = request_body.value("folder_id", 0);
-            user_prompt.content = request_body.value("content", "");
-            user_prompt.name = request_body.value("name", "");
-            user_prompt.sharing = request_body.value("sharing", "private");
-            user_prompt.created_at = get_current_time();
-            user_prompt.updated_at = get_current_time();
-
-            models::Prompt::create_prompt(user_prompt);
-
-            json response = {
-                    {"message", "Prompt created"}
-            };
-            return crow::response(201, response.dump());
 
         } catch (json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
@@ -51,25 +57,33 @@ namespace controllers {
     }
 
     crow::response get_prompts(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
 
-            std::string user_id = request_body.value("user_id", "");
+                // Extract user ID to get the profile
+                std::string user_id = *user_id_opt;
 
-            if (user_id.empty()) {
-                return crow::response(400, "User ID must be provided");
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID must be provided");
+                }
+
+                std::vector<UserPrompt> user_prompts = models::Prompt::prompts(user_id);
+
+                json prompts_json = json::array();
+                for (const auto &prompt: user_prompts) {
+                    json prompt_json;
+                    models::Prompt::to_json(prompt_json, prompt);
+                    prompts_json.push_back(prompt_json);
+                }
+
+                return crow::response(200, prompts_json.dump());
             }
-
-            std::vector<UserPrompt> user_prompts = models::Prompt::prompts(user_id);
-
-            json prompts_json = json::array();
-            for (const auto &prompt: user_prompts) {
-                json prompt_json;
-                models::Prompt::to_json(prompt_json, prompt);
-                prompts_json.push_back(prompt_json);
-            }
-
-            return crow::response(200, prompts_json.dump());
         } catch (json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
             return crow::response(400, "JSON parsing error: " + std::string(e.what()));
@@ -80,6 +94,10 @@ namespace controllers {
     }
 
     crow::response delete_prompt(const crow::request &req, const int &prompt_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             if (models::Prompt::delete_prompt(prompt_id)) {
                 return crow::response(204, "");
@@ -97,6 +115,10 @@ namespace controllers {
     }
 
     crow::response update_prompt(const crow::request &req, const int &prompt_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
@@ -128,6 +150,10 @@ namespace controllers {
     }
 
     crow::response get_prompt_by_id(const crow::request &req, const int &prompt_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         UserPrompt user_prompt = models::Prompt::get_prompt_by_id(prompt_id);
 
         if (user_prompt.user_id.empty()) {

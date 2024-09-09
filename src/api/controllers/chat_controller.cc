@@ -12,6 +12,11 @@ using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_chat(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -19,7 +24,8 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
             if (user_id.empty()) {
                 return crow::response(400, "User ID is required");
             }
@@ -59,10 +65,16 @@ namespace controllers {
     }
 
     crow::response get_chats(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
             if (user_id.empty()) {
                 return crow::response(400, "User ID must be provided");
@@ -88,6 +100,11 @@ namespace controllers {
     }
 
     crow::response delete_chat(const crow::request &req, const int &chat_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             if (models::Chat::delete_chat(chat_id)) {
                 return crow::response(204, "");
@@ -105,6 +122,11 @@ namespace controllers {
     }
 
     crow::response update_chat(const crow::request &req, const int &chat_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -142,6 +164,11 @@ namespace controllers {
     }
 
     crow::response get_chat_by_id(const crow::request &req, const int &chat_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         UserChat user_chat = models::Chat::get_chat_by_id(chat_id);
 
         if (user_chat.user_id.empty()) {

@@ -10,6 +10,10 @@ using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_tool(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
@@ -17,28 +21,33 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
-            if (user_id.empty()) {
-                return crow::response(400, "User ID is required");
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
+
+                // Extract user ID to get the profile
+                std::string user_id = *user_id_opt;
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID is required");
+                }
+
+                UserTool tool;
+                tool.user_id = user_id;
+                tool.folder_id = request_body.value("folder_id", 0);
+                tool.name = request_body.value("name", "tool");
+                tool.sharing = request_body.value("sharing", "private");
+                tool.description = request_body.value("description", "Default tool");
+                tool.created_at = get_current_time();
+                tool.updated_at = get_current_time();
+                tool.schema = request_body.value("schema", json::object());
+                tool.url = request_body.value("url", "");
+
+                models::Tool::create_tool(tool);
+
+                json response = {
+                        {"message", "Tool created"}
+                };
+                return crow::response(201, response.dump());
             }
-
-            UserTool tool;
-            tool.user_id = user_id;
-            tool.folder_id = request_body.value("folder_id", 0);
-            tool.name = request_body.value("name", "tool");
-            tool.sharing = request_body.value("sharing", "private");
-            tool.description = request_body.value("description", "Default tool");
-            tool.created_at = get_current_time();
-            tool.updated_at = get_current_time();
-            tool.schema = request_body.value("schema", json::object());
-            tool.url = request_body.value("url", "");
-
-            models::Tool::create_tool(tool);
-
-            json response = {
-                    {"message", "Tool created"}
-            };
-            return crow::response(201, response.dump());
 
         } catch (json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
@@ -50,25 +59,34 @@ namespace controllers {
     }
 
     crow::response get_tools(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
-            std::string user_id = request_body.value("user_id", "");
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
 
-            if (user_id.empty()) {
-                return crow::response(400, "User ID must be provided");
+                // Extract user ID to get the profile
+                std::string user_id = *user_id_opt;
+
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID must be provided");
+                }
+
+                std::vector<UserTool> tools = models::Tool::tools(user_id);
+
+                json tools_json = json::array();
+                for (const auto &tool: tools) {
+                    json tool_json;
+                    models::Tool::to_json(tool_json, tool);
+                    tools_json.push_back(tool_json);
+                }
+
+                return crow::response(200, tools_json.dump());
             }
-
-            std::vector<UserTool> tools = models::Tool::tools(user_id);
-
-            json tools_json = json::array();
-            for (const auto &tool: tools) {
-                json tool_json;
-                models::Tool::to_json(tool_json, tool);
-                tools_json.push_back(tool_json);
-            }
-
-            return crow::response(200, tools_json.dump());
         } catch (json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
             return crow::response(400, "JSON parsing error: " + std::string(e.what()));
@@ -79,6 +97,10 @@ namespace controllers {
     }
 
     crow::response delete_tool(const crow::request &req, const int &tool_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             if (models::Tool::delete_tool(tool_id)) {
                 return crow::response(204, "");
@@ -96,6 +118,11 @@ namespace controllers {
     }
 
     crow::response update_tool(const crow::request &req, const int &tool_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -129,6 +156,11 @@ namespace controllers {
     }
 
     crow::response get_tool_by_id(const crow::request &req, const int &tool_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         UserTool tool = models::Tool::get_tool_by_id(tool_id);
 
         if (tool.user_id.empty()) {

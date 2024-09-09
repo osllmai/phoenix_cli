@@ -11,6 +11,11 @@ using json = nlohmann::json;
 namespace controllers {
 
     crow::response create_assistant(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -18,7 +23,9 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
             if (user_id.empty()) {
                 return crow::response(400, "User ID is required");
             }
@@ -55,10 +62,16 @@ namespace controllers {
     }
 
     crow::response get_assistants(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
             if (user_id.empty()) {
                 return crow::response(400, "User ID must be provided");
@@ -84,6 +97,11 @@ namespace controllers {
     }
 
     crow::response delete_assistant(const crow::request &req, const int &assistant_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         CROW_LOG_WARNING << "assistant id is " << assistant_id;
         try {
             if (models::Assistant::delete_assistant(assistant_id)) {
@@ -102,6 +120,11 @@ namespace controllers {
     }
 
     crow::response update_assistant(const crow::request &req, const int &assistant_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -140,6 +163,11 @@ namespace controllers {
     }
 
     crow::response get_assistant_by_id(const crow::request &req, const int &assistant_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         UserAssistant user_assistant = models::Assistant::get_assistant_by_id(assistant_id);
 
         if (user_assistant.user_id.empty()) {

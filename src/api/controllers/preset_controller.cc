@@ -1,10 +1,9 @@
 #include "api/include/controllers/preset_controller.h"
 #include "api/include/models/preset.h"
+#include "api/include/utils/utils.h"
+
 #include <crow.h>
 #include <nlohmann/json.hpp>
-#include <chrono>
-#include <iomanip>
-#include <sstream>
 #include <string>
 
 using json = nlohmann::json;
@@ -12,16 +11,12 @@ using json = nlohmann::json;
 
 namespace controllers {
 
-    std::string get_current_time() {
-        auto now = std::chrono::system_clock::now();
-        std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
-        std::tm tm = *std::localtime(&currentTime);
-        std::ostringstream oss;
-        oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
-        return oss.str();
-    }
-
     crow::response create_preset(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -29,7 +24,9 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
             if (user_id.empty()) {
                 return crow::response(400, "User ID is required");
             }
@@ -67,6 +64,11 @@ namespace controllers {
     }
 
     crow::response update_preset(const crow::request &req, const int &preset_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -107,6 +109,11 @@ namespace controllers {
     }
 
     crow::response delete_preset(const crow::request &req, const int &preset_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             if (models::PresetModel::delete_preset(preset_id)) {
                 return crow::response(204);
@@ -120,6 +127,11 @@ namespace controllers {
     }
 
     crow::response get_preset_by_id(const crow::request &req, const int &preset_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             Preset preset = models::PresetModel::get_preset_by_id(preset_id);
 
@@ -138,10 +150,16 @@ namespace controllers {
     }
 
     crow::response get_presets(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
             if (user_id.empty()) {
                 return crow::response(400, "User ID must be provided");

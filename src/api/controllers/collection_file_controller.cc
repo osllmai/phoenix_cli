@@ -10,14 +10,20 @@ using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_collection_file(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
             if (!request_body.is_object()) {
                 return crow::response(400, "Invalid JSON");
             }
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
-            std::string user_id = request_body.value("user_id", "");
             if (user_id.empty()) {
                 return crow::response(400, "User ID is required");
             }
@@ -46,10 +52,14 @@ namespace controllers {
     }
 
     crow::response get_collection_files(const crow::request &req) {
-        try {
-            json request_body = json::parse(req.body);
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
 
-            std::string user_id = request_body.value("user_id", "");
+        try {
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
             if (user_id.empty()) {
                 return crow::response(400, "User ID must be provided");
@@ -75,6 +85,11 @@ namespace controllers {
     }
 
     crow::response delete_collection_file(const crow::request &req, const int &collection_id, const int &file_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             if (models::CollectionFile::delete_collection_file(collection_id, file_id)) {
                 return crow::response(204, "");
@@ -92,6 +107,11 @@ namespace controllers {
     }
 
     crow::response update_collection_file(const crow::request &req, const int &collection_id, const int &file_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -121,6 +141,11 @@ namespace controllers {
     }
 
     crow::response get_collection_file_by_id(const crow::request &req, const int &collection_id, const int &file_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         UserCollectionFile collection_file = models::CollectionFile::get_collection_file_by_id(collection_id, file_id);
 
         if (collection_file.user_id.empty()) {

@@ -1,5 +1,6 @@
 #include "api/include/controllers/file_controller.h"
 #include "api/include/models/file.h"
+#include "api/include/utils/utils.h"
 
 #include <crow.h>
 #include <nlohmann/json.hpp>
@@ -11,6 +12,11 @@ using json = nlohmann::json;
 namespace controllers {
 
     crow::response create_file(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -18,7 +24,9 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
             int folder_id = request_body.value("folder_id", 0);
 
             if (user_id.empty() || folder_id == 0) {
@@ -50,6 +58,11 @@ namespace controllers {
     }
 
     crow::response update_file(const int &file_id, const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -83,6 +96,11 @@ namespace controllers {
     }
 
     crow::response delete_file(const int &file_id, const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             UserFile user_file = models::File::get_file_by_id(file_id);
 
@@ -106,6 +124,11 @@ namespace controllers {
     }
 
     crow::response get_file_by_id(const int &file_id, const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             UserFile user_file = models::File::get_file_by_id(file_id);
 
@@ -128,9 +151,14 @@ namespace controllers {
     }
 
     crow::response get_files_by_user_id(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
-            json request_body = json::parse(req.body);
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
             if (user_id.empty()) {
                 return crow::response(422, "User ID must be sent");
@@ -160,6 +188,11 @@ namespace controllers {
     }
 
     crow::response get_files_by_folder_id(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
             int folder_id = request_body.value("folder_id", 0);

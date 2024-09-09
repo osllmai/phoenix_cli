@@ -10,6 +10,11 @@ using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_model(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -17,7 +22,9 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
             if (user_id.empty()) {
                 return crow::response(400, "User ID is required");
             }
@@ -50,10 +57,16 @@ namespace controllers {
     }
 
     crow::response get_models(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
-            std::string user_id = request_body.value("user_id", "");
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
 
             if (user_id.empty()) {
                 return crow::response(400, "User ID must be provided");
@@ -79,6 +92,11 @@ namespace controllers {
     }
 
     crow::response delete_model(const crow::request &req, const int &model_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             if (models::Model::delete_model(model_id)) {
                 return crow::response(204, "");
@@ -96,6 +114,11 @@ namespace controllers {
     }
 
     crow::response update_model(const crow::request &req, const int &model_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -105,7 +128,9 @@ namespace controllers {
                 return crow::response(404, "Model not found");
             }
 
-            model.user_id = request_body.value("user_id", model.user_id);
+            auto get_user_id = get_user_id_from_token(auth_header);
+
+            model.user_id = *get_user_id;
             model.folder_id = request_body.value("folder_id", model.folder_id);
             model.api_key = request_body.value("api_key", model.api_key);
             model.base_url = request_body.value("base_url", model.base_url);
@@ -130,6 +155,11 @@ namespace controllers {
     }
 
     crow::response get_model_by_id(const crow::request &req, const int &model_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         UserModel model = models::Model::get_model_by_id(model_id);
 
         if (model.user_id.empty()) {

@@ -38,4 +38,14 @@ namespace models {
         };
         return is_changed;
     }
+
+    BaseUser User::get_user_by_email(const std::string &email) {
+        BaseUser base_user;
+        db << "SELECT * FROM users WHERE email = ? ;" << email >> [&](int id, std::string username, std::string email) {
+            base_user.id = id;
+            base_user.username = username;
+            base_user.email = email;
+        };
+        return base_user;
+    }
 }

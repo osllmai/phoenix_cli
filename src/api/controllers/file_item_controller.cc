@@ -1,5 +1,6 @@
 #include "api/include/controllers/file_item_controller.h"
 #include "api/include/models/file_item.h"
+#include "api/include/utils/utils.h"
 
 #include <crow.h>
 #include <nlohmann/json.hpp>
@@ -16,12 +17,19 @@ namespace controllers {
 
     // Create a new FileItem
     crow::response create_file_item(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
+            auto get_user_id = get_user_id_from_token(auth_header);
+
             UserFileItem file_item;
+            file_item.user_id = *get_user_id;
             file_item.file_id = request_body.at("file_id").get<int>();
-            file_item.user_id = request_body.at("user_id").get<std::string>();
             file_item.sharing = request_body.value("sharing", "private");
             file_item.content = request_body.at("content").get<std::string>();
             file_item.tokens = request_body.at("tokens").get<int>();
@@ -42,6 +50,11 @@ namespace controllers {
 
     // Get a FileItem by ID
     crow::response get_file_item_by_id(const crow::request &req, const int &file_item_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             UserFileItem file_item = models::FileItem::get_file_item_by_id(file_item_id);
 
@@ -60,6 +73,11 @@ namespace controllers {
 
     // Update a FileItem by ID
     crow::response update_file_item(const crow::request &req, const int &file_item_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -69,8 +87,10 @@ namespace controllers {
                 return crow::response(404, "File item not found");
             }
 
+            auto get_user_id = get_user_id_from_token(auth_header);
+
             file_item.file_id = request_body.value("file_id", file_item.file_id);
-            file_item.user_id = request_body.value("user_id", file_item.user_id);
+            file_item.user_id = *get_user_id;
             file_item.sharing = request_body.value("sharing", file_item.sharing);
             file_item.content = request_body.value("content", file_item.content);
             file_item.tokens = request_body.value("tokens", file_item.tokens);
@@ -97,6 +117,11 @@ namespace controllers {
 
     // Delete a FileItem by ID
     crow::response delete_file_item(const crow::request &req, const int &file_item_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             if (models::FileItem::delete_file_item(file_item_id)) {
                 return crow::response(204);  // No Content
@@ -109,6 +134,11 @@ namespace controllers {
     }
 
     crow::response get_file_items_by_file(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             int file_id = std::stoi(req.url_params.get("file_id"));
             auto file_items = models::FileItem::file_items_by_file(file_id);
@@ -130,6 +160,11 @@ namespace controllers {
     }
 
     crow::response match_file_items_local(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             std::string query_embedding_str = req.url_params.get("query_embedding");
             int match_count = std::stoi(req.url_params.get("match_count"));

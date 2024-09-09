@@ -4,9 +4,6 @@
 
 #include <crow.h>
 #include <nlohmann/json.hpp>
-#include <chrono>
-#include <iomanip>
-#include <sstream>
 #include <string>
 
 using json = nlohmann::json;
@@ -14,6 +11,10 @@ using json = nlohmann::json;
 
 namespace controllers {
     crow::response create_workspace(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
@@ -21,37 +22,42 @@ namespace controllers {
                 return crow::response(400, "Invalid JSON");
             }
 
-            std::string user_id = request_body.value("user_id", "");
-            if (user_id.empty()) {
-                return crow::response(400, "User ID  is required");
+
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
+                std::string user_id = *user_id_opt;
+
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID  is required");
+                }
+
+                if (request_body.value("is_home", false)) {
+                    models::Workspace::disable_home_workspaces();
+                }
+
+                UserWorkspace user_workspace;
+                user_workspace.user_id = user_id;
+                user_workspace.name = request_body.value("name", "workspace");
+                user_workspace.default_context_length = request_body.value("default_context_length", 2048);
+                user_workspace.default_model = request_body.value("default_model", "gpt-4o");
+                user_workspace.sharing = request_body.value("sharing", "private");
+                user_workspace.default_prompt = request_body.value("default_prompt", "You are a helpful assistant");
+                user_workspace.default_temperature = request_body.value("default_temperature", 0.3);
+                user_workspace.description = request_body.value("description", "Default workspace");
+                user_workspace.embeddings_provider = request_body.value("embeddings_provider", "nomic");
+                user_workspace.include_profile_context = request_body.value("include_profile_context", false);
+                user_workspace.include_workspace_instructions = request_body.value("include_workspace_instructions",
+                                                                                   false);
+                user_workspace.instructions = request_body.value("instructions", "no instructions");
+                user_workspace.is_home = request_body.value("is_home", false);
+
+                models::Workspace::create_workspace(user_workspace);
+
+                json response = {
+                        {"message", "Workspace created"}
+                };
+                return crow::response(201, response.dump());
             }
-
-            if (request_body.value("is_home", false)) {
-                models::Workspace::disable_home_workspaces();
-            }
-
-            UserWorkspace user_workspace;
-            user_workspace.user_id = user_id;
-            user_workspace.name = request_body.value("name", "workspace");
-            user_workspace.default_context_length = request_body.value("default_context_length", 2048);
-            user_workspace.default_model = request_body.value("default_model", "gpt-4o");
-            user_workspace.sharing = request_body.value("sharing", "private");
-            user_workspace.default_prompt = request_body.value("default_prompt", "You are a helpful assistant");
-            user_workspace.default_temperature = request_body.value("default_temperature", 0.3);
-            user_workspace.description = request_body.value("description", "Default workspace");
-            user_workspace.embeddings_provider = request_body.value("embeddings_provider", "nomic");
-            user_workspace.include_profile_context = request_body.value("include_profile_context", false);
-            user_workspace.include_workspace_instructions = request_body.value("include_workspace_instructions", false);
-            user_workspace.instructions = request_body.value("instructions", "no instructions");
-            user_workspace.is_home = request_body.value("is_home", false);
-
-            models::Workspace::create_workspace(user_workspace);
-
-            json response = {
-                    {"message", "Workspace created"}
-            };
-            return crow::response(201, response.dump());
-
 
         } catch (json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
@@ -63,25 +69,34 @@ namespace controllers {
     }
 
     crow::response get_workspaces(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             json request_body = json::parse(req.body);
 
-            std::string user_id = request_body.value("user_id", "");
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
 
-            if (user_id.empty()) {
-                return crow::response(400, "User ID must be provided");
+                // Extract user ID to get the profile
+                std::string user_id = *user_id_opt;
+
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID must be provided");
+                }
+
+                std::vector<UserWorkspace> user_workspaces = models::Workspace::workspaces(user_id);
+
+                json workspaces_json = json::array();
+                for (const auto &workspace: user_workspaces) {
+                    json workspace_json;
+                    models::Workspace::to_json(workspace_json, workspace);
+                    workspaces_json.push_back(workspace_json);
+                }
+
+                return crow::response(200, workspaces_json.dump());
             }
-
-            std::vector<UserWorkspace> user_workspaces = models::Workspace::workspaces(user_id);
-
-            json workspaces_json = json::array();
-            for (const auto &workspace: user_workspaces) {
-                json workspace_json;
-                models::Workspace::to_json(workspace_json, workspace);
-                workspaces_json.push_back(workspace_json);
-            }
-
-            return crow::response(200, workspaces_json.dump());
         } catch (json::exception &e) {
             CROW_LOG_ERROR << "JSON parsing error: " << e.what();
             return crow::response(400, "JSON parsing error: " + std::string(e.what()));
@@ -92,6 +107,10 @@ namespace controllers {
     }
 
     crow::response delete_workspace(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
         try {
             if (models::Workspace::delete_workspace(workspace_id)) {
                 return crow::response(204, "");
@@ -110,6 +129,11 @@ namespace controllers {
     }
 
     crow::response update_workspace(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         try {
             json request_body = json::parse(req.body);
 
@@ -157,7 +181,12 @@ namespace controllers {
         }
     }
 
-    crow::response get_workspace_by_id(const crow::request &req, const int &workspace_id ) {
+    crow::response get_workspace_by_id(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
         UserWorkspace user_workspace = models::Workspace::get_workspace_by_id(workspace_id);
 
         if (user_workspace.user_id.empty()) {
