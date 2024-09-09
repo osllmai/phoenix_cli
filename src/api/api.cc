@@ -12,6 +12,20 @@
 #include "api/include/routes/assistant_workspace.h"
 #include "api/include/routes/chat.h"
 #include "api/include/routes/chat_file.h"
+#include "api/include/routes/message.h"
+#include "api/include/routes/message_file_item.h"
+#include "api/include/routes/prompt.h"
+#include "api/include/routes/prompt_workspace.h"
+#include "api/include/routes/assistant_collection.h"
+#include "api/include/routes/assistant_file.h"
+#include "api/include/routes/assistant_tool.h"
+#include "api/include/routes/collection.h"
+#include "api/include/routes/collection_file.h"
+#include "api/include/routes/collection_workspace.h"
+#include "api/include/routes/model.h"
+#include "api/include/routes/model_workspace.h"
+#include "api/include/routes/tool.h"
+#include "api/include/routes/tool_workspace.h"
 #include "api/include/models/database.h"
 
 void endpoints() {
@@ -37,6 +51,20 @@ void endpoints() {
     routes::init_assistant_workspace_routes(app);
     routes::init_chat_routes(app);
     routes::init_chat_file_routes(app);
+    routes::init_message_routes(app);
+    routes::init_message_file_item_routes(app);
+    routes::init_prompt_routes(app);
+    routes::init_prompt_workspace_routes(app);
+    routes::init_assistant_collection_routes(app);
+    routes::init_assistant_file_routes(app);
+    routes::init_assistant_tool_routes(app);
+    routes::init_collection_routes(app);
+    routes::init_collection_file_routes(app);
+    routes::init_collection_workspace_routes(app);
+    routes::init_tool_routes(app);
+    routes::init_tool_workspace_routes(app);
+    routes::init_model_routes(app);
+    routes::init_model_workspace_routes(app);
 
     // Start the server
     app.port(18080).multithreaded().run();

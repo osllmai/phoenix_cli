@@ -68,7 +68,8 @@ namespace models {
 
             // Create indexes
             db << "CREATE INDEX IF NOT EXISTS idx_workspaces_user_id ON workspaces (user_id);";
-            db << "CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_home_workspace_per_user ON workspaces(user_id) WHERE is_home;";
+            db
+                    << "CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_home_workspace_per_user ON workspaces(user_id) WHERE is_home;";
 
             // Create folders table
             db << "CREATE TABLE IF NOT EXISTS folders ("
@@ -225,8 +226,10 @@ namespace models {
 
             // Create indexes for assistant_workspaces
             db << "CREATE INDEX IF NOT EXISTS assistant_workspaces_user_id_idx ON assistant_workspaces(user_id);";
-            db << "CREATE INDEX IF NOT EXISTS assistant_workspaces_assistant_id_idx ON assistant_workspaces(assistant_id);";
-            db << "CREATE INDEX IF NOT EXISTS assistant_workspaces_workspace_id_idx ON assistant_workspaces(workspace_id);";
+            db
+                    << "CREATE INDEX IF NOT EXISTS assistant_workspaces_assistant_id_idx ON assistant_workspaces(assistant_id);";
+            db
+                    << "CREATE INDEX IF NOT EXISTS assistant_workspaces_workspace_id_idx ON assistant_workspaces(workspace_id);";
 
             // Create chats table
             db << "CREATE TABLE IF NOT EXISTS chats ("
@@ -268,6 +271,177 @@ namespace models {
             // Create indexes for chat_files
             db << "CREATE INDEX IF NOT EXISTS idx_chat_files_chat_id ON chat_files (chat_id);";
 
+            // Create messages table
+            db << "CREATE TABLE IF NOT EXISTS messages ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "chat_id INTEGER NOT NULL,"
+                  "user_id INTEGER NOT NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "content TEXT NOT NULL CHECK (length(content) <= 1000000),"
+                  "image_paths TEXT NOT NULL,"
+                  "model TEXT NOT NULL CHECK (length(model) <= 1000),"
+                  "role TEXT NOT NULL CHECK (length(role) <= 1000),"
+                  "sequence_number INTEGER NOT NULL,"
+                  "CONSTRAINT check_image_paths_length CHECK (length(image_paths) <= 16000)"
+                  ");";
+
+            // Create indexes for messages
+            db << "CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages (chat_id);";
+
+            // Create message_file_items table
+            db << "CREATE TABLE IF NOT EXISTS message_file_items ("
+                  "user_id INTEGER NOT NULL,"
+                  "message_id INTEGER NOT NULL,"
+                  "file_item_id INTEGER NOT NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "PRIMARY KEY(message_id, file_item_id)"
+                  ");";
+
+            // Create indexes for message_file_items
+            db << "CREATE INDEX IF NOT EXISTS idx_message_file_items_message_id ON message_file_items (message_id);";
+
+            // Create prompts table
+            db << "CREATE TABLE IF NOT EXISTS prompts ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
+                  "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at DATETIME,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "name TEXT NOT NULL CHECK (length(name) <= 100),"
+                  "content TEXT NOT NULL CHECK (length(content) <= 1000000)"
+                  ");";
+
+            // Create indexes for prompts
+            db << "CREATE INDEX IF NOT EXISTS prompts_user_id_idx ON assistants(user_id);";
+
+            // Create assistant_workspaces table
+            db << "CREATE TABLE IF NOT EXISTS prompt_workspaces ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "prompt_id INTEGER NOT NULL REFERENCES prompts(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER NOT NULL REFERENCES folders(id) ON DELETE CASCADE,"
+                  "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at DATETIME,"
+                  "PRIMARY KEY(prompt_id, folder_id)"
+                  ");";
+
+            // Create indexes for prompt_workspaces
+            db << "CREATE INDEX IF NOT EXISTS prompt_workspaces_user_id_idx ON prompt_workspaces(user_id);";
+            db << "CREATE INDEX IF NOT EXISTS prompt_workspaces_prompt_id_idx ON prompt_workspaces(prompt_id);";
+            db << "CREATE INDEX IF NOT EXISTS prompt_workspaces_folder_id_idx ON prompt_workspaces(folder_id);";
+
+            // Create collections table
+            db << "CREATE TABLE IF NOT EXISTS collections ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "name TEXT NOT NULL CHECK (length(name) <= 100),"
+                  "content TEXT NOT NULL CHECK (length(content) <= 1000000)"
+                  ");";
+
+            // Create collection_workspaces table
+            db << "CREATE TABLE IF NOT EXISTS collection_workspaces ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,"
+                  "workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at DATETIME,"
+                  "PRIMARY KEY(collection_id, workspace_id)"
+                  ");";
+
+            // Create collection_files table
+            db << "CREATE TABLE IF NOT EXISTS collection_files ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,"
+                  "file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "PRIMARY KEY(collection_id, file_id)"
+                  ");";
+
+            // Create assistant_files table
+            db << "CREATE TABLE IF NOT EXISTS assistant_files ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "assistant_id INTEGER NOT NULL REFERENCES assistants(id) ON DELETE CASCADE,"
+                  "file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "PRIMARY KEY(assistant_id, file_id)"
+                  ");";
+
+            // Create assistant_collections table
+            db << "CREATE TABLE IF NOT EXISTS assistant_collections ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "assistant_id INTEGER NOT NULL REFERENCES assistants(id) ON DELETE CASCADE,"
+                  "collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "PRIMARY KEY(assistant_id, collection_id)"
+                  ");";
+
+            // Create tools table
+            db << "CREATE TABLE IF NOT EXISTS tools ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "description TEXT NOT NULL CHECK (length(description) <= 500),"
+                  "name TEXT NOT NULL CHECK (length(name) <= 100),"
+                  "schema TEXT,"
+                  "url TEXT"
+                  ");";
+
+            // Create tool_workspaces table
+            db << "CREATE TABLE IF NOT EXISTS tool_workspaces ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "tool_id INTEGER NOT NULL REFERENCES tools(id) ON DELETE CASCADE,"
+                  "workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at DATETIME,"
+                  "PRIMARY KEY(tool_id, workspace_id)"
+                  ");";
+
+            // Create assistant_tools table
+            db << "CREATE TABLE IF NOT EXISTS assistant_tools ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "assistant_id INTEGER NOT NULL REFERENCES assistants(id) ON DELETE CASCADE,"
+                  "tool_id INTEGER NOT NULL REFERENCES tools(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "PRIMARY KEY(assistant_id, tool_id)"
+                  ");";
+
+            // Create models table
+            db << "CREATE TABLE IF NOT EXISTS models ("
+                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "sharing TEXT NOT NULL DEFAULT 'private',"
+                  "api_key TEXT,"
+                  "base_url TEXT,"
+                  "description TEXT,"
+                  "model_id TEXT,"
+                  "name TEXT"
+                  ");";
+
+            // Create model_workspaces table
+            db << "CREATE TABLE IF NOT EXISTS model_workspaces ("
+                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
+                  "model_id INTEGER NOT NULL REFERENCES models(id) ON DELETE CASCADE,"
+                  "workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "updated_at TEXT,"
+                  "PRIMARY KEY(model_id, workspace_id)"
+                  ");";
 
             std::cout << "Database initialized successfully." << std::endl;
         } catch (const sqlite::sqlite_exception &e) {
