@@ -23,9 +23,10 @@ struct UserFile {
     UserFile() = default;
 
     UserFile(const int &id, const std::string &user_id, const int &folder_id,
-         const std::string &created_at, const std::string &updated_at, const std::string &sharing,
-         const std::string &description, const std::string &file_path, const std::string &name, int size, int tokens,
-         const std::string &type)
+             const std::string &created_at, const std::string &updated_at, const std::string &sharing,
+             const std::string &description, const std::string &file_path, const std::string &name, int size,
+             int tokens,
+             const std::string &type)
             : id(id), user_id(user_id), folder_id(folder_id), created_at(created_at), updated_at(updated_at),
               sharing(sharing), description(description), file_path(file_path), name(name), size(size), tokens(tokens),
               type(type) {}
@@ -45,6 +46,8 @@ namespace models {
         static std::vector<UserFile> files_by_user(const std::string &user_id);
 
         static std::vector<UserFile> files_by_folder(const int &folder_id);
+
+        static std::vector<UserFile> get_files_by_workspace_id(const int &workspace_id);
 
         static void to_json(json &j, const UserFile &user_file);
     };

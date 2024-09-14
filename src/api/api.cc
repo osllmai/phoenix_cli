@@ -27,9 +27,19 @@
 #include "api/include/routes/tool.h"
 #include "api/include/routes/tool_workspace.h"
 #include "api/include/models/database.h"
+#include <crow/middlewares/cors.h>
 
 void endpoints() {
-    crow::SimpleApp app;
+    crow::App<crow::CORSHandler> app;
+
+    auto &cors = app.get_middleware<crow::CORSHandler>();
+    cors
+    .global()
+    .headers("Content-Type", "Authorization")
+    .methods("POST"_method, "GET"_method, "PUT"_method, "DELETE"_method, "PATCH"_method)
+    .origin("http://localhost:3001");
+
+
 
     // Initialize the database
     models::init_db();

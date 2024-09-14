@@ -76,7 +76,7 @@ namespace models {
             int affected_rows = 0;
             db << "SELECT changes()" >> affected_rows;
             return affected_rows > 0;
-        } catch (const sqlite::sqlite_exception& e) {
+        } catch (const sqlite::sqlite_exception &e) {
             std::cerr << "SQLite error updating workspace: " << e.what() << " (" << e.get_code() << ")" << std::endl;
             return false;
         } catch (const std::exception &e) {
@@ -153,6 +153,25 @@ namespace models {
                 {"name",                           workspace.name}
         };
     };
+
+    UserWorkspace Workspace::is_home_user_workspace(const std::string &user_id) {
+        UserWorkspace user_workspace;
+        db << "SELECT * FROM workspaces WHERE user_id = ? AND is_home = 1;" << user_id >>
+           [&](std::string id, std::string user_id, std::string created_at, std::string updated_at, std::string sharing,
+               int default_context_length, std::string default_model, std::string default_prompt,
+               double default_temperature,
+               std::string description, std::string embeddings_provider, int include_profile_context,
+               int include_workspace_instructions,
+               std::string instructions, int is_home, std::string name) {
+               user_workspace = {id, user_id, created_at, updated_at, sharing, default_context_length, default_model,
+                                 default_prompt,
+                                 default_temperature, description, embeddings_provider,
+                                 static_cast<bool>(include_profile_context),
+                                 static_cast<bool>(include_workspace_instructions),
+                                 instructions, static_cast<bool>(is_home), name};
+           };
+        return user_workspace;
+    }
 
 
 }

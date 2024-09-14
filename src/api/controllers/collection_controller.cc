@@ -91,6 +91,41 @@ namespace controllers {
         }
     }
 
+    crow::response get_collections_by_workspace_id(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        try {
+            json request_body = json::parse(req.body);
+
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
+            if (user_id.empty()) {
+                return crow::response(400, "User ID must be provided");
+            }
+
+            std::vector<UserCollection> collections = models::Collection::get_collections_by_workspace_id(workspace_id);
+
+            json collections_json = json::array();
+            for (const auto &collection: collections) {
+                json collection_json;
+                models::Collection::to_json(collection_json, collection);
+                collections_json.push_back(collection_json);
+            }
+
+            return crow::response(200, collections_json.dump());
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during get_collections: " << e.what();
+            return crow::response(500, "Error during get_collections: " + std::string(e.what()));
+        }
+    }
+
     crow::response delete_collection(const crow::request &req, const int &collection_id) {
         auto auth_header = req.get_header_value("Authorization");
         if (auth_header.empty()) {

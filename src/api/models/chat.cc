@@ -120,6 +120,38 @@ namespace models {
         return result;
     }
 
+    std::vector<UserChat> Chat::get_chats_by_workspace_id(const int &workspace_id) {
+        std::vector<UserChat> result;
+
+        try {
+            db
+                    << "SELECT id, user_id, workspace_id, assistant_id, folder_id, created_at, updated_at, sharing, context_length, "
+                       "description, embeddings_provider, include_profile_context, include_workspace_instructions, model, name, prompt, temperature "
+                       "FROM chats WHERE workspace_id = ?;"
+                    << workspace_id
+                    >> [&](int id, std::string user_id, int workspace_id, int assistant_id, int folder_id,
+                           std::string created_at, std::string updated_at,
+                           std::string sharing, int context_length, std::string description,
+                           std::string embeddings_provider,
+                           int include_profile_context, int include_workspace_instructions,
+                           std::string model, std::string name, std::string prompt, double temperature) {
+                        UserChat chat{
+                                id, user_id, workspace_id, assistant_id, folder_id, created_at, updated_at, sharing,
+                                context_length,
+                                description,
+                                embeddings_provider, static_cast<bool>(include_profile_context),
+                                static_cast<bool>(include_workspace_instructions),
+                                model, name, prompt, temperature};
+                        result.push_back(chat);
+                    };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving chats: " << e.what() << std::endl;
+        }
+
+        return result;
+    }
+
     void Chat::to_json(json &j, const UserChat &chat) {
         j = json{
                 {"id",                             chat.id},

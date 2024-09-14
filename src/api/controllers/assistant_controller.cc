@@ -68,8 +68,6 @@ namespace controllers {
         }
 
         try {
-            json request_body = json::parse(req.body);
-
             auto get_user_id = get_user_id_from_token(auth_header);
             std::string user_id = *get_user_id;
 
@@ -78,6 +76,39 @@ namespace controllers {
             }
 
             std::vector<UserAssistant> user_assistants = models::Assistant::assistants(user_id);
+
+            json assistants_json = json::array();
+            for (const auto &assistant: user_assistants) {
+                json assistant_json;
+                models::Assistant::to_json(assistant_json, assistant);
+                assistants_json.push_back(assistant_json);
+            }
+
+            return crow::response(200, assistants_json.dump());
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during get_assistants: " << e.what();
+            return crow::response(500, "Error during get_assistants: " + std::string(e.what()));
+        }
+    }
+
+    crow::response get_assistants_by_workspace_id(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        try {
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
+            if (user_id.empty()) {
+                return crow::response(400, "User ID must be provided");
+            }
+
+            std::vector<UserAssistant> user_assistants = models::Assistant::get_assistants_by_workspace_id(workspace_id);
 
             json assistants_json = json::array();
             for (const auto &assistant: user_assistants) {
@@ -141,9 +172,12 @@ namespace controllers {
             user_assistant.prompt = request_body.value("prompt", user_assistant.prompt);
             user_assistant.temperature = request_body.value("temperature", user_assistant.temperature);
             user_assistant.description = request_body.value("description", user_assistant.description);
-            user_assistant.embeddings_provider = request_body.value("embeddings_provider", user_assistant.embeddings_provider);
-            user_assistant.include_profile_context = request_body.value("include_profile_context", user_assistant.include_profile_context);
-            user_assistant.include_workspace_instructions = request_body.value("include_workspace_instructions", user_assistant.include_workspace_instructions);
+            user_assistant.embeddings_provider = request_body.value("embeddings_provider",
+                                                                    user_assistant.embeddings_provider);
+            user_assistant.include_profile_context = request_body.value("include_profile_context",
+                                                                        user_assistant.include_profile_context);
+            user_assistant.include_workspace_instructions = request_body.value("include_workspace_instructions",
+                                                                               user_assistant.include_workspace_instructions);
             user_assistant.image_path = request_body.value("image_path", user_assistant.image_path);
             user_assistant.updated_at = get_current_time();
 

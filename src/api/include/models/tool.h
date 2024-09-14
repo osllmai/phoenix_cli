@@ -23,10 +23,17 @@ namespace models {
     class Tool {
     public:
         static UserTool get_tool_by_id(const int &id);
+
         static void create_tool(const UserTool &tool);
+
         static bool update_tool(const int &id, const UserTool &tool);
+
         static bool delete_tool(const int &id);
+
         static std::vector<UserTool> tools(const std::string &user_id);
+
+        static std::vector<UserTool> get_tools_by_workspace_id(const int &workspace_id);
+
         static void to_json(json &j, const UserTool &tool);
     };
 }

@@ -38,6 +38,8 @@ namespace models {
 
         static std::vector<UserAssistant> assistants(const std::string &user_id);
 
+        static std::vector<UserAssistant> get_assistants_by_workspace_id(const int &workspace_id);
+
         static void to_json(json &j, const UserAssistant &assistant);
     };
 }

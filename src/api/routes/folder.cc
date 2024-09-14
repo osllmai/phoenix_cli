@@ -1,10 +1,11 @@
 #include "api/include/routes/folder.h"
 #include <api/include/controllers/folder_controller.h>
 #include <crow.h>
+#include "crow/middlewares/cors.h"
 
 
 namespace routes {
-    void init_folder_routes(crow::SimpleApp &app) {
+    void init_folder_routes(crow::App<crow::CORSHandler> &app) {
         CROW_ROUTE(app, "/folder").methods("POST"_method)([](const crow::request &req) {
             return controllers::create_folder(req);
         });

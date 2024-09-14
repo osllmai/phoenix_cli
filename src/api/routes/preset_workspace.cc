@@ -1,9 +1,10 @@
 #include "api/include/routes/preset_workspace.h"
 #include "api/include/controllers/preset_workspace_controller.h"
 #include <crow.h>
+#include "crow/middlewares/cors.h"
 
 namespace routes {
-    void init_preset_workspace_routes(crow::SimpleApp &app) {
+    void init_preset_workspace_routes(crow::App<crow::CORSHandler> &app) {
         CROW_ROUTE(app, "/preset_workspace").methods("POST"_method)([](const crow::request &req) {
             return controllers::create_preset_workspace(req);
         });

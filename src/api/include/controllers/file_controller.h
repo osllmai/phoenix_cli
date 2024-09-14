@@ -18,4 +18,6 @@ namespace controllers {
 
     crow::response get_files_by_folder_id(const crow::request &req);
 
+    crow::response get_files_by_workspace_id(const crow::request &req, const int &workspace_id);
+
 }

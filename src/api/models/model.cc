@@ -25,8 +25,10 @@ namespace models {
         UserModel model;
         db << "SELECT * FROM models WHERE id = ?;" << id >>
            [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
-               std::string sharing, std::string api_key, std::string base_url, std::string description, std::string model_id, std::string name) {
-               model = {id, user_id, folder_id, created_at, updated_at, sharing, api_key, base_url, description, model_id, name};
+               std::string sharing, std::string api_key, std::string base_url, std::string description,
+               std::string model_id, std::string name) {
+               model = {id, user_id, folder_id, created_at, updated_at, sharing, api_key, base_url, description,
+                        model_id, name};
            };
         return model;
     }
@@ -52,7 +54,7 @@ namespace models {
             int affected_rows = 0;
             db << "SELECT changes()" >> affected_rows;
             return affected_rows > 0;
-        } catch (const sqlite::sqlite_exception& e) {
+        } catch (const sqlite::sqlite_exception &e) {
             std::cerr << "SQLite error updating model: " << e.what() << " (" << e.get_code() << ")" << std::endl;
             return false;
         } catch (const std::exception &e) {
@@ -72,13 +74,42 @@ namespace models {
         std::vector<UserModel> result;
 
         try {
-            db << "SELECT id, user_id, folder_id, created_at, updated_at, sharing, api_key, base_url, description, model_id, name "
-                  "FROM models WHERE user_id = ?;"
-               << user_id
+            db
+                    << "SELECT id, user_id, folder_id, created_at, updated_at, sharing, api_key, base_url, description, model_id, name "
+                       "FROM models WHERE user_id = ?;"
+                    << user_id
+                    >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
+                           std::string sharing, std::string api_key, std::string base_url, std::string description,
+                           std::string model_id, std::string name) {
+                        UserModel model{
+                                id, user_id, folder_id, created_at, updated_at, sharing, api_key, base_url, description,
+                                model_id, name};
+                        result.push_back(model);
+                    };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving models: " << e.what() << std::endl;
+        }
+
+        return result;
+    }
+
+    std::vector<UserModel> Model::get_models_by_workspace_id(const int &workspace_id) {
+        std::vector<UserModel> result;
+
+        try {
+            db << "SELECT m.id, m.user_id, m.folder_id, m.created_at, m.updated_at, m.sharing, m.api_key, m.base_url, "
+                  "m.description, m.model_id, m.name "
+                  "FROM models m "
+                  "JOIN model_workspaces mw ON m.id = mw.model_id "
+                  "WHERE mw.workspace_id = ?;"
+               << workspace_id
                >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
-                      std::string sharing, std::string api_key, std::string base_url, std::string description, std::string model_id, std::string name) {
+                      std::string sharing, std::string api_key, std::string base_url, std::string description,
+                      std::string model_id, std::string name) {
                    UserModel model{
-                           id, user_id, folder_id, created_at, updated_at, sharing, api_key, base_url, description, model_id, name};
+                           id, user_id, folder_id, created_at, updated_at, sharing, api_key, base_url, description,
+                           model_id, name};
                    result.push_back(model);
                };
 
@@ -91,17 +122,17 @@ namespace models {
 
     void Model::to_json(json &j, const UserModel &model) {
         j = json{
-                {"id",                   model.id},
-                {"user_id",              model.user_id},
-                {"folder_id",            model.folder_id},
-                {"created_at",           model.created_at},
-                {"updated_at",           model.updated_at},
-                {"sharing",              model.sharing},
-                {"api_key",              model.api_key},
-                {"base_url",             model.base_url},
-                {"description",          model.description},
-                {"model_id",             model.model_id},
-                {"name",                 model.name}
+                {"id",          model.id},
+                {"user_id",     model.user_id},
+                {"folder_id",   model.folder_id},
+                {"created_at",  model.created_at},
+                {"updated_at",  model.updated_at},
+                {"sharing",     model.sharing},
+                {"api_key",     model.api_key},
+                {"base_url",    model.base_url},
+                {"description", model.description},
+                {"model_id",    model.model_id},
+                {"name",        model.name}
         };
     };
 }

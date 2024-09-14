@@ -29,6 +29,8 @@ namespace models {
 
         static std::vector<UserPrompt> prompts(const std::string &user_id);
 
+        static std::vector<UserPrompt> get_prompts_by_workspace_id(const int &workspace_id);
+
         static void to_json(json &j, const UserPrompt &prompt);
     };
 }

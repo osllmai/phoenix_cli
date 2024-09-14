@@ -1,9 +1,10 @@
 #include "api/include/routes/prompt_workspace.h"
 #include "api/include/controllers/prompt_workspace_controller.h"
 #include <crow.h>
+#include "crow/middlewares/cors.h"
 
 namespace routes {
-    void init_prompt_workspace_routes(crow::SimpleApp &app) {
+    void init_prompt_workspace_routes(crow::App<crow::CORSHandler> &app) {
         CROW_ROUTE(app, "/prompt_workspace").methods("POST"_method)([](const crow::request &req) {
             return controllers::create_prompt_workspace(req);
         });

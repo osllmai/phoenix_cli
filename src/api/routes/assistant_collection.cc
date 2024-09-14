@@ -1,9 +1,10 @@
 #include "api/include/routes/assistant_collection.h"
 #include "api/include/controllers/assistant_collection_controller.h"
 #include <crow.h>
+#include "crow/middlewares/cors.h"
 
 namespace routes {
-    void init_assistant_collection_routes(crow::SimpleApp &app) {
+    void init_assistant_collection_routes(crow::App<crow::CORSHandler> &app) {
         CROW_ROUTE(app, "/assistant_collection").methods("POST"_method)([](const crow::request &req) {
             return controllers::create_assistant_collection(req);
         });

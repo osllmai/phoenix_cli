@@ -1,9 +1,10 @@
 #include "api/include/routes/auth.h"
 #include "api/include/controllers/auth_controller.h"
+#include "crow/middlewares/cors.h"
 #include <crow.h>
 
 namespace routes {
-    void init_auth_routes(crow::SimpleApp &app) {
+    void init_auth_routes(crow::App<crow::CORSHandler> &app) {
         CROW_ROUTE(app, "/register").methods("POST"_method)([](const crow::request &req) {
             return controllers::register_user(req);
         });

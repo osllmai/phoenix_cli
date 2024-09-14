@@ -81,6 +81,30 @@ namespace models {
         return result;
     }
 
+    std::vector<UserPrompt> Prompt::get_prompts_by_workspace_id(const int &workspace_id) {
+        std::vector<UserPrompt> result;
+
+        try {
+            db << "SELECT p.id, p.user_id, p.folder_id, p.created_at, p.updated_at, p.sharing, p.name, p.content "
+                  "FROM prompts p "
+                  "JOIN prompt_workspaces pw ON p.id = pw.prompt_id "
+                  "JOIN folders f ON pw.folder_id = f.id "
+                  "WHERE f.workspace_id = ?;"
+               << workspace_id
+               >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
+                      std::string sharing, std::string content, std::string name) {
+                   UserPrompt prompt{
+                           id, user_id, folder_id, created_at, updated_at, sharing, content, name};
+                   result.push_back(prompt);
+               };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving prompts: " << e.what() << std::endl;
+        }
+
+        return result;
+    }
+
     void Prompt::to_json(json &j, const UserPrompt &prompt) {
         j = json{
                 {"id",                    prompt.id},

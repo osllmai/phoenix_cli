@@ -39,6 +39,8 @@ namespace models {
 
         static std::vector<UserChat> chats(const std::string &user_id);
 
+        static std::vector<UserChat> get_chats_by_workspace_id(const int &workspace_id);
+
         static void to_json(json &j, const UserChat &chat);
     };
 }

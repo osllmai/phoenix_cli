@@ -24,10 +24,17 @@ namespace models {
     class Model {
     public:
         static UserModel get_model_by_id(const int &id);
+
         static void create_model(const UserModel &model);
+
         static bool update_model(const int &id, const UserModel &model);
+
         static bool delete_model(const int &id);
+
         static std::vector<UserModel> models(const std::string &user_id);
+
+        static std::vector<UserModel> get_models_by_workspace_id(const int &workspace_id);
+
         static void to_json(json &j, const UserModel &model);
     };
 }

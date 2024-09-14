@@ -1,9 +1,10 @@
 #include "api/include/routes/collection_file.h"
 #include "api/include/controllers/collection_file_controller.h"
 #include <crow.h>
+#include "crow/middlewares/cors.h"
 
 namespace routes {
-    void init_collection_file_routes(crow::SimpleApp &app) {
+    void init_collection_file_routes(crow::App<crow::CORSHandler> &app) {
         CROW_ROUTE(app, "/collection_file").methods("POST"_method)([](const crow::request &req) {
             return controllers::create_collection_file(req);
         });

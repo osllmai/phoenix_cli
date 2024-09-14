@@ -171,7 +171,7 @@ namespace controllers {
             }
 
             json response = json::array();
-            for (const auto &file : user_files) {
+            for (const auto &file: user_files) {
                 json f;
                 models::File::to_json(f, file);
                 response.push_back(f);
@@ -208,7 +208,44 @@ namespace controllers {
             }
 
             json response = json::array();
-            for (const auto &file : user_files) {
+            for (const auto &file: user_files) {
+                json f;
+                models::File::to_json(f, file);
+                response.push_back(f);
+            }
+            return crow::response(200, response.dump());
+
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during file retrieval: " << e.what();
+            return crow::response(400, "Error during file retrieval: " + std::string(e.what()));
+        }
+    }
+
+    crow::response get_files_by_workspace_id(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        try {
+            json request_body = json::parse(req.body);
+            int folder_id = request_body.value("folder_id", 0);
+
+            if (folder_id == 0) {
+                return crow::response(422, "Workspace ID must be sent");
+            }
+
+            std::vector<UserFile> user_files = models::File::get_files_by_workspace_id(workspace_id);
+
+            if (user_files.empty()) {
+                return crow::response(404, "Files not found");
+            }
+
+            json response = json::array();
+            for (const auto &file: user_files) {
                 json f;
                 models::File::to_json(f, file);
                 response.push_back(f);

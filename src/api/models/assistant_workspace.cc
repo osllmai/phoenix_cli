@@ -56,6 +56,25 @@ namespace models {
         return is_deleted > 0;
     }
 
+    std::vector<UserAssistantWorkspace> AssistantWorkspace::get_assistants_by_workspace_id(const int &workspace_id) {
+        std::vector<UserAssistantWorkspace> result;
+
+        try {
+            db << "SELECT user_id, assistant_id, workspace_id, created_at, updated_at FROM assistant_workspaces WHERE workspace_id = ?;"
+               << workspace_id
+               >> [&](std::string user_id, int assistant_id, int workspace_id, std::string created_at, std::string updated_at) {
+                   UserAssistantWorkspace assistant_workspace{
+                           user_id, assistant_id, workspace_id, created_at, updated_at};
+                   result.push_back(assistant_workspace);
+               };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving assistant_workspaces: " << e.what() << std::endl;
+        }
+
+        return result;
+    }
+
     std::vector<UserAssistantWorkspace> AssistantWorkspace::assistant_workspaces(const std::string &user_id) {
         std::vector<UserAssistantWorkspace> result;
 

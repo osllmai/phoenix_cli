@@ -182,6 +182,41 @@ namespace controllers {
             CROW_LOG_ERROR << "Error getting preset: " << e.what();
             return crow::response(500, "Error getting preset: " + std::string(e.what()));
         }
+    }
+
+    crow::response get_presets_by_workspace_id(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        try {
+            json request_body = json::parse(req.body);
+
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
+            if (user_id.empty()) {
+                return crow::response(400, "User ID must be provided");
+            }
+
+            std::vector<Preset> presets = models::PresetModel::get_presets_by_workspace_id(workspace_id);
+
+            json presets_json = json::array();
+            for (const auto &preset: presets) {
+                json preset_json;
+                models::PresetModel::to_json(preset_json, preset);
+                presets_json.push_back(preset_json);
+            }
+
+            return crow::response(200, presets_json.dump());
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error getting preset: " << e.what();
+            return crow::response(500, "Error getting preset: " + std::string(e.what()));
+        }
 
     }
 }

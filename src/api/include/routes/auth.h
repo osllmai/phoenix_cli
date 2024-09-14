@@ -5,7 +5,8 @@
 #pragma once
 
 #include <crow.h>
+#include "crow/middlewares/cors.h"
 
 namespace routes {
-    void init_auth_routes(crow::SimpleApp &app);
+    void init_auth_routes(crow::App<crow::CORSHandler> &app);
 }

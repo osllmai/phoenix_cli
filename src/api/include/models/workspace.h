@@ -43,6 +43,8 @@ namespace models {
 
         static void to_json(json &j, const UserWorkspace &workspace);
 
+        static UserWorkspace is_home_user_workspace(const std::string &user_id);
+
 
     };
 }

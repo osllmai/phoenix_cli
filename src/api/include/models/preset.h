@@ -28,10 +28,17 @@ namespace models {
     class PresetModel {
     public:
         static Preset get_preset_by_id(const int &id);
+
         static void create_preset(const Preset &preset);
+
         static bool update_preset(const int &id, const Preset &preset);
+
         static bool delete_preset(const int &id);
+
         static std::vector<Preset> get_presets(const std::string &user_id);
+
+        static std::vector<Preset> get_presets_by_workspace_id(const int &workspace_id);
+
         static void to_json(json &j, const Preset &preset);
     };
 }

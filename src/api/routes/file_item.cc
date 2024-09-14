@@ -1,9 +1,10 @@
 #include "api/include/routes/file_item.h"
 #include "api/include/controllers/file_item_controller.h"
 #include <crow.h>
+#include "crow/middlewares/cors.h"
 
 namespace routes {
-    void init_file_item_routes(crow::SimpleApp &app) {
+    void init_file_item_routes(crow::App<crow::CORSHandler> &app) {
         // Create a new FileItem
         CROW_ROUTE(app, "/file_item").methods("POST"_method)([](const crow::request &req) {
             return controllers::create_file_item(req);

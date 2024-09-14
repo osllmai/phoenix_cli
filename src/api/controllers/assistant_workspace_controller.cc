@@ -66,7 +66,8 @@ namespace controllers {
                 return crow::response(400, "User ID must be provided");
             }
 
-            std::vector<UserAssistantWorkspace> user_assistant_workspaces = models::AssistantWorkspace::assistant_workspaces(user_id);
+            std::vector<UserAssistantWorkspace> user_assistant_workspaces = models::AssistantWorkspace::assistant_workspaces(
+                    user_id);
 
             json assistant_workspaces_json = json::array();
             for (const auto &assistant_workspace: user_assistant_workspaces) {
@@ -85,7 +86,43 @@ namespace controllers {
         }
     }
 
-    crow::response delete_assistant_workspace(const crow::request &req, const int &assistant_id, const int &workspace_id) {
+    crow::response get_assistants_workspace_by_id(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        try {
+
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
+            if (user_id.empty()) {
+                return crow::response(400, "User ID must be provided");
+            }
+
+            std::vector<UserAssistantWorkspace> user_assistant_workspaces = models::AssistantWorkspace::get_assistants_by_workspace_id(
+                    workspace_id);
+
+            json assistant_workspaces_json = json::array();
+            for (const auto &assistant_workspace: user_assistant_workspaces) {
+                json assistant_workspace_json;
+                models::AssistantWorkspace::to_json(assistant_workspace_json, assistant_workspace);
+                assistant_workspaces_json.push_back(assistant_workspace_json);
+            }
+
+            return crow::response(200, assistant_workspaces_json.dump());
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during get_assistant_workspaces: " << e.what();
+            return crow::response(500, "Error during get_assistant_workspaces: " + std::string(e.what()));
+        }
+    }
+
+    crow::response
+    delete_assistant_workspace(const crow::request &req, const int &assistant_id, const int &workspace_id) {
         auto auth_header = req.get_header_value("Authorization");
         if (auth_header.empty()) {
             return crow::response(401, "No Authorization header provided");
@@ -107,7 +144,8 @@ namespace controllers {
         }
     }
 
-    crow::response update_assistant_workspace(const crow::request &req, const int &assistant_id, const int &workspace_id) {
+    crow::response
+    update_assistant_workspace(const crow::request &req, const int &assistant_id, const int &workspace_id) {
         auto auth_header = req.get_header_value("Authorization");
         if (auth_header.empty()) {
             return crow::response(401, "No Authorization header provided");
@@ -116,7 +154,8 @@ namespace controllers {
         try {
             json request_body = json::parse(req.body);
 
-            UserAssistantWorkspace user_assistant_workspace = models::AssistantWorkspace::get_assistant_workspace_by_id(assistant_id, workspace_id);
+            UserAssistantWorkspace user_assistant_workspace = models::AssistantWorkspace::get_assistant_workspace_by_id(
+                    assistant_id, workspace_id);
 
             if (user_assistant_workspace.user_id.empty()) {
                 return crow::response(404, "Assistant Workspace not found");
@@ -125,7 +164,8 @@ namespace controllers {
             user_assistant_workspace.user_id = request_body.value("user_id", user_assistant_workspace.user_id);
             user_assistant_workspace.updated_at = get_current_time();
 
-            if (models::AssistantWorkspace::update_assistant_workspace(assistant_id, workspace_id, user_assistant_workspace)) {
+            if (models::AssistantWorkspace::update_assistant_workspace(assistant_id, workspace_id,
+                                                                       user_assistant_workspace)) {
                 return crow::response(200, "assistant workspace updated");
             } else {
                 return crow::response(400, "assistant workspace not updated");
@@ -140,13 +180,15 @@ namespace controllers {
         }
     }
 
-    crow::response get_assistant_workspace_by_id(const crow::request &req, const int &assistant_id, const int &workspace_id) {
+    crow::response
+    get_assistant_workspace_by_id(const crow::request &req, const int &assistant_id, const int &workspace_id) {
         auto auth_header = req.get_header_value("Authorization");
         if (auth_header.empty()) {
             return crow::response(401, "No Authorization header provided");
         }
 
-        UserAssistantWorkspace user_assistant_workspace = models::AssistantWorkspace::get_assistant_workspace_by_id(assistant_id, workspace_id);
+        UserAssistantWorkspace user_assistant_workspace = models::AssistantWorkspace::get_assistant_workspace_by_id(
+                assistant_id, workspace_id);
 
         if (user_assistant_workspace.user_id.empty()) {
             return crow::response(404, "assistant workspace not found");

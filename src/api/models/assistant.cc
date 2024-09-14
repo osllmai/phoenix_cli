@@ -113,6 +113,37 @@ namespace models {
         return result;
     }
 
+    std::vector<UserAssistant> Assistant::get_assistants_by_workspace_id(const int &workspace_id) {
+        std::vector<UserAssistant> result;
+
+        try {
+            db
+                    << "SELECT a.id, a.user_id, a.folder_id, a.created_at, a.updated_at, a.sharing, a.context_length, a.description, "
+                       "a.embeddings_provider, a.include_profile_context, a.include_workspace_instructions, a.model, a.name, a.image_path, a.prompt, "
+                       "a.temperature FROM assistants a "
+                       "JOIN assistant_workspaces aw ON a.id = aw.assistant_id "
+                       "WHERE aw.workspace_id = ?;"
+                    << workspace_id
+                    >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
+                           std::string sharing, int context_length, std::string description,
+                           std::string embeddings_provider,
+                           int include_profile_context, int include_workspace_instructions, std::string model,
+                           std::string name, std::string image_path, std::string prompt, double temperature) {
+                        UserAssistant assistant{
+                                id, user_id, folder_id, created_at, updated_at, sharing, context_length, description,
+                                embeddings_provider, static_cast<bool>(include_profile_context),
+                                static_cast<bool>(include_workspace_instructions), model, name, image_path, prompt,
+                                temperature};
+                        result.push_back(assistant);
+                    };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving assistants by workspace: " << e.what() << std::endl;
+        }
+
+        return result;
+    }
+
     void Assistant::to_json(json &j, const UserAssistant &assistant) {
         j = json{
                 {"id",                             assistant.id},

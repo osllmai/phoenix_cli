@@ -90,7 +90,34 @@ namespace models {
                       std::string name, std::string prompt, double temperature) {
                    Preset preset = {id, user_id, folder_id, created_at, updated_at, sharing, context_length,
                                     description, embeddings_provider, static_cast<bool>(include_profile_context),
-                                    static_cast<bool>(include_workspace_instructions), model, name, prompt, temperature};
+                                    static_cast<bool>(include_workspace_instructions), model, name, prompt,
+                                    temperature};
+                   result.push_back(preset);
+               };
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving presets: " << e.what() << std::endl;
+        }
+        return result;
+    }
+
+    std::vector<Preset> PresetModel::get_presets_by_workspace_id(const int &workspace_id) {
+        std::vector<Preset> result;
+        try {
+            db << "SELECT p.id, p.user_id, p.folder_id, p.created_at, p.updated_at, p.sharing, p.context_length, "
+                  "p.description, p.embeddings_provider, p.include_profile_context, p.include_workspace_instructions, "
+                  "p.model, p.name, p.prompt, p.temperature "
+                  "FROM presets p "
+                  "JOIN preset_workspaces pw ON p.id = pw.preset_id "
+                  "WHERE pw.workspace_id = ?;"
+               << workspace_id
+               >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
+                      std::string sharing, int context_length, std::string description, std::string embeddings_provider,
+                      int include_profile_context, int include_workspace_instructions, std::string model,
+                      std::string name, std::string prompt, double temperature) {
+                   Preset preset = {id, user_id, folder_id, created_at, updated_at, sharing, context_length,
+                                    description, embeddings_provider, static_cast<bool>(include_profile_context),
+                                    static_cast<bool>(include_workspace_instructions), model, name, prompt,
+                                    temperature};
                    result.push_back(preset);
                };
         } catch (const std::exception &e) {
@@ -101,21 +128,21 @@ namespace models {
 
     void PresetModel::to_json(json &j, const Preset &preset) {
         j = json{
-                {"id", preset.id},
-                {"user_id", preset.user_id},
-                {"folder_id", preset.folder_id},
-                {"created_at", preset.created_at},
-                {"updated_at", preset.updated_at},
-                {"sharing", preset.sharing},
-                {"context_length", preset.context_length},
-                {"description", preset.description},
-                {"embeddings_provider", preset.embeddings_provider},
-                {"include_profile_context", preset.include_profile_context},
+                {"id",                             preset.id},
+                {"user_id",                        preset.user_id},
+                {"folder_id",                      preset.folder_id},
+                {"created_at",                     preset.created_at},
+                {"updated_at",                     preset.updated_at},
+                {"sharing",                        preset.sharing},
+                {"context_length",                 preset.context_length},
+                {"description",                    preset.description},
+                {"embeddings_provider",            preset.embeddings_provider},
+                {"include_profile_context",        preset.include_profile_context},
                 {"include_workspace_instructions", preset.include_workspace_instructions},
-                {"model", preset.model},
-                {"name", preset.name},
-                {"prompt", preset.prompt},
-                {"temperature", preset.temperature}
+                {"model",                          preset.model},
+                {"name",                           preset.name},
+                {"prompt",                         preset.prompt},
+                {"temperature",                    preset.temperature}
         };
     }
 }

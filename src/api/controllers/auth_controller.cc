@@ -1,5 +1,6 @@
 #include "api/include/controllers/auth_controller.h"
 #include "api/include/models/user.h"
+#include "api/include/models/workspace.h"
 #include "api/include/models/profile.h"
 #include "api/include/utils/utils.h"
 
@@ -74,9 +75,29 @@ namespace controllers {
             if (models::User::authenticate(email, password)) {
                 std::string access_token = create_jwt(user.id, false);
                 std::string refresh_token = create_jwt(user.id, true);
+
+                UserWorkspace user_workspace = models::Workspace::is_home_user_workspace(std::to_string(user.id));
+                json user_workspace_json = {
+                        {"id", user_workspace.id},
+                        {"name", user_workspace.name},
+                        {"is_home", user_workspace.is_home},
+                        {"user_id", user_workspace.user_id},
+                        {"include_profile_context", user_workspace.include_profile_context},
+                        {"include_workspace_instructions", user_workspace.include_workspace_instructions},
+                        {"description", user_workspace.description},
+                        {"default_context_length", user_workspace.default_context_length},
+                        {"updated_at", user_workspace.updated_at},
+                        {"created_at", user_workspace.created_at},
+                        {"default_model", user_workspace.default_model},
+                        {"default_prompt", user_workspace.default_prompt},
+                        {"default_temperature", user_workspace.default_temperature},
+                        {"embeddings_provider", user_workspace.embeddings_provider},
+                        {"instructions", user_workspace.instructions},
+                };
                 json response = {
                         {"access_token",  access_token},
                         {"refresh_token", refresh_token},
+                        {"workspace", user_workspace_json}
                 };
                 return crow::response(200, response.dump());
             } else {

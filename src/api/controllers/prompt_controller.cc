@@ -165,5 +165,42 @@ namespace controllers {
 
         return crow::response(200, response.dump());
     }
+
+    crow::response get_prompts_by_workspace_id(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+        try {
+            json request_body = json::parse(req.body);
+            if (verify_jwt(auth_header)) {
+                auto user_id_opt = get_user_id_from_token(auth_header);
+
+                // Extract user ID to get the profile
+                std::string user_id = *user_id_opt;
+
+                if (user_id.empty()) {
+                    return crow::response(400, "User ID must be provided");
+                }
+
+                std::vector<UserPrompt> user_prompts = models::Prompt::get_prompts_by_workspace_id(workspace_id);
+
+                json prompts_json = json::array();
+                for (const auto &prompt: user_prompts) {
+                    json prompt_json;
+                    models::Prompt::to_json(prompt_json, prompt);
+                    prompts_json.push_back(prompt_json);
+                }
+
+                return crow::response(200, prompts_json.dump());
+            }
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during get_prompts: " << e.what();
+            return crow::response(500, "Error during get_prompts: " + std::string(e.what()));
+        }
+    }
 }
 

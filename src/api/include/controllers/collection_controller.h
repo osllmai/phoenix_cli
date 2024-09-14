@@ -8,5 +8,6 @@ namespace controllers {
     crow::response update_collection(const crow::request &req, const int &collection_id);
     crow::response delete_collection(const crow::request &req, const int &collection_id);
     crow::response get_collection_by_id(const crow::request &req, const int &collection_id);
+    crow::response get_collections_by_workspace_id(const crow::request &req, const int &workspace_id);
     crow::response get_collections(const crow::request &req);
 }

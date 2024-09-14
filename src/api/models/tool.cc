@@ -86,6 +86,30 @@ namespace models {
         return result;
     }
 
+    std::vector<UserTool> Tool::get_tools_by_workspace_id(const int &workspace_id) {
+        std::vector<UserTool> result;
+
+        try {
+            db << "SELECT t.id, t.user_id, t.folder_id, t.created_at, t.updated_at, t.sharing, t.description, "
+                  "t.name, t.schema, t.url "
+                  "FROM tools t "
+                  "JOIN tool_workspaces tw ON t.id = tw.tool_id "
+                  "WHERE tw.workspace_id = ?;"
+               << workspace_id
+               >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
+                      std::string sharing, std::string description, std::string name, std::string schema, std::string url) {
+                   UserTool tool{
+                           id, user_id, folder_id, created_at, updated_at, sharing, description, name, json::parse(schema), url};
+                   result.push_back(tool);
+               };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving tools: " << e.what() << std::endl;
+        }
+
+        return result;
+    }
+
     void Tool::to_json(json &j, const UserTool &tool) {
         j = json{
                 {"id",                   tool.id},

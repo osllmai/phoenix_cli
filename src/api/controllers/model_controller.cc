@@ -91,6 +91,40 @@ namespace controllers {
         }
     }
 
+    crow::response get_models_by_workspace_id(const crow::request &req, const int &workspace_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        try {
+
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
+            if (user_id.empty()) {
+                return crow::response(400, "User ID must be provided");
+            }
+
+            std::vector<UserModel> models = models::Model::get_models_by_workspace_id(workspace_id);
+
+            json models_json = json::array();
+            for (const auto &model: models) {
+                json model_json;
+                models::Model::to_json(model_json, model);
+                models_json.push_back(model_json);
+            }
+
+            return crow::response(200, models_json.dump());
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during get_models: " << e.what();
+            return crow::response(500, "Error during get_models: " + std::string(e.what()));
+        }
+    }
+
     crow::response delete_model(const crow::request &req, const int &model_id) {
         auto auth_header = req.get_header_value("Authorization");
         if (auth_header.empty()) {

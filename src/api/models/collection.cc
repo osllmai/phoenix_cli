@@ -82,6 +82,30 @@ namespace models {
         return result;
     }
 
+    std::vector<UserCollection> Collection::get_collections_by_workspace_id(const int &workspace_id) {
+        std::vector<UserCollection> result;
+
+        try {
+            db << "SELECT c.id, c.user_id, c.folder_id, c.created_at, c.updated_at, c.sharing, c.name, c.content "
+                  "FROM collections c "
+                  "JOIN collection_workspaces cw ON c.id = cw.collection_id "
+                  "WHERE cw.workspace_id = ?;"
+               << workspace_id
+               >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
+                      std::string sharing, std::string description, std::string name) {
+                   UserCollection collection{
+                           id, user_id, folder_id, created_at, updated_at, sharing, description, name};
+                   result.push_back(collection);
+               };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving collections by workspace: " << e.what() << std::endl;
+        }
+
+
+        return result;
+    }
+
     void Collection::to_json(json &j, const UserCollection &collection) {
         j = json{
                 {"id",                   collection.id},

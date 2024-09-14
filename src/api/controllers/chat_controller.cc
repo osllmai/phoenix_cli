@@ -9,7 +9,6 @@
 using json = nlohmann::json;
 
 
-
 namespace controllers {
     crow::response create_chat(const crow::request &req) {
         auto auth_header = req.get_header_value("Authorization");
@@ -144,8 +143,10 @@ namespace controllers {
             user_chat.temperature = request_body.value("temperature", user_chat.temperature);
             user_chat.description = request_body.value("description", user_chat.description);
             user_chat.embeddings_provider = request_body.value("embeddings_provider", user_chat.embeddings_provider);
-            user_chat.include_profile_context = request_body.value("include_profile_context", user_chat.include_profile_context);
-            user_chat.include_workspace_instructions = request_body.value("include_workspace_instructions", user_chat.include_workspace_instructions);
+            user_chat.include_profile_context = request_body.value("include_profile_context",
+                                                                   user_chat.include_profile_context);
+            user_chat.include_workspace_instructions = request_body.value("include_workspace_instructions",
+                                                                          user_chat.include_workspace_instructions);
             user_chat.updated_at = get_current_time();
 
             if (models::Chat::update_chat(chat_id, user_chat)) {
@@ -179,5 +180,33 @@ namespace controllers {
         models::Chat::to_json(response, user_chat);
 
         return crow::response(200, response.dump());
+    }
+
+    crow::response get_chats_by_workspace_id(const crow::request &req, const int &workspace_id) {
+        try {
+            auto auth_head = req.get_header_value("Authorization");
+            if (auth_head.empty()) {
+                return crow::response(401, "No Authorization header provided");
+            }
+
+            std::vector<UserChat> user_chats = models::Chat::get_chats_by_workspace_id(workspace_id);
+
+            json chats_json = json::array();
+            for (const auto &chat: user_chats) {
+                json chat_json;
+                models::Chat::to_json(chat_json, chat);
+                chats_json.push_back(chat_json);
+            }
+
+            return crow::response(200, chats_json.dump());
+
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during get_chats: " << e.what();
+            return crow::response(500, "Error during get_chats: " + std::string(e.what()));
+        }
+
     }
 }
