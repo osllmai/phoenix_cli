@@ -4,37 +4,20 @@
 #include "directory_manager.h"
 #include "download_model.h"
 #include "models_list.h"
+#include "chat.h"
+#include "api/api.h"
+#include "web_server.h"
 
-#include <atomic>
-#include <boost/asio.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/beast.hpp>
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <chat.cc>
-#include <cstdlib>
-#include <deque>
-#include <filesystem>
+
 #include <iostream>
-#include <mutex>
 #include <nlohmann/json.hpp>
-#include <queue>
 #include <sstream>
 #include <string>
 #include <thread>
-#include <vector>
-#include <api/api.cc>
 
-namespace fs = std::filesystem;
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace net = boost::asio;
 
 using json = nlohmann::json;
-using tcp = net::ip::tcp;
+
 
 void print_help() {
     std::cout << "PhoenixCLI is a large language model runner developed by "
@@ -92,7 +75,7 @@ void handle_run_command(const std::string &model_name) {
         if (data.contains("promptTemplate") && data["promptTemplate"].is_string()) {
             std::string prompt_template = data["promptTemplate"].get<std::string>();
             sqlite3_close(db);
-            run_command(prompt_template, model_path);
+            PhoenixChat::run_command(prompt_template, model_path);
         } else {
             std::cerr
                     << "Error: 'promptTemplate' is missing or not a string for model: "
@@ -183,37 +166,101 @@ void handle_exec_command(const std::string &model_path) {
                 "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_"
                 "header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
     }
-    run_command(prompt_template, model_path);
+    PhoenixChat::run_command(prompt_template, model_path);
 }
 
+//void handle_history_command(const std::string &chat_id) {
+//    if (chat_id.empty()) {
+//        std::cout << "List of your chats:" << std::endl;
+//        std::cout << "----------------------------" << std::endl;
+//        sqlite3 *db;
+//        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+//        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
+//            DatabaseManager::read_chat_histories(db);
+//            sqlite3_close(db);
+//        }
+//        //        std::vector<std::string> history = ChatManager::chat_histories();
+//        //        for (const auto &chat: history) {
+//        //            std::cout << chat << std::endl;
+//        //        }
+//    } else {
+//        std::string chat_file_path;
+//        sqlite3 *db;
+//        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+//        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
+//            chat_file_path = DatabaseManager::get_path_by_filename(db, chat_id);
+//            sqlite3_close(db);
+//        }
+//        json chat_history = ChatManager::chat_history_conversation(chat_file_path);
+//        if (!chat_history.empty()) {
+//            std::cout << chat_history.dump(4) << std::endl;
+//        } else {
+//            std::cout << "No chat history found for ID: " << chat_id << std::endl;
+//        }
+//    }
+//}
+
 void handle_history_command(const std::string &chat_id) {
-    if (chat_id.empty()) {
-        std::cout << "List of your chats:" << std::endl;
-        std::cout << "----------------------------" << std::endl;
-        sqlite3 *db;
-        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-            DatabaseManager::read_chat_histories(db);
-            sqlite3_close(db);
-        }
-        //        std::vector<std::string> history = ChatManager::chat_histories();
-        //        for (const auto &chat: history) {
-        //            std::cout << chat << std::endl;
-        //        }
-    } else {
-        std::string chat_file_path;
-        sqlite3 *db;
-        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-            chat_file_path = DatabaseManager::get_path_by_filename(db, chat_id);
-            sqlite3_close(db);
-        }
-        json chat_history = ChatManager::chat_history_conversation(chat_file_path);
-        if (!chat_history.empty()) {
-            std::cout << chat_history.dump(4) << std::endl;
+    sqlite3 *db;
+    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
+        if (chat_id.empty()) {
+            std::cout << "List of your chats:" << std::endl;
+            std::cout << "----------------------------" << std::endl;
+
+            std::string select_chats_sql = "SELECT id, created_at FROM chats;";
+            sqlite3_stmt *stmt;
+            if (sqlite3_prepare_v2(db, select_chats_sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+                while (sqlite3_step(stmt) == SQLITE_ROW) {
+                    long chat_id = sqlite3_column_int64(stmt, 0);
+                    const char *created_at = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+                    std::cout << "Chat ID: " << chat_id << ", Created At: " << created_at << std::endl;
+                }
+                sqlite3_finalize(stmt);
+            } else {
+                std::cerr << "Error preparing select chats statement: " << sqlite3_errmsg(db) << std::endl;
+            }
         } else {
-            std::cout << "No chat history found for ID: " << chat_id << std::endl;
+            std::string select_chat_sql = "SELECT id, created_at, prompt, model, temperature FROM chats WHERE id = ?;";
+            sqlite3_stmt *stmt;
+            if (sqlite3_prepare_v2(db, select_chat_sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+                sqlite3_bind_int64(stmt, 1, std::stol(chat_id));
+                if (sqlite3_step(stmt) == SQLITE_ROW) {
+                    json chat_history;
+                    chat_history["chat_id"] = sqlite3_column_int64(stmt, 0);
+                    chat_history["created_at"] = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+                    chat_history["prompt"] = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+                    chat_history["model"] = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3));
+                    chat_history["temperature"] = sqlite3_column_double(stmt, 4);
+
+                    std::string select_messages_sql = "SELECT sequence_number, role, content FROM messages WHERE chat_id = ? ORDER BY sequence_number;";
+                    sqlite3_stmt *msg_stmt;
+                    if (sqlite3_prepare_v2(db, select_messages_sql.c_str(), -1, &msg_stmt, nullptr) == SQLITE_OK) {
+                        sqlite3_bind_int64(msg_stmt, 1, std::stol(chat_id));
+                        while (sqlite3_step(msg_stmt) == SQLITE_ROW) {
+                            json message;
+                            message["sequence_number"] = sqlite3_column_int(msg_stmt, 0);
+                            message["role"] = reinterpret_cast<const char *>(sqlite3_column_text(msg_stmt, 1));
+                            message["content"] = reinterpret_cast<const char *>(sqlite3_column_text(msg_stmt, 2));
+                            chat_history["messages"].push_back(message);
+                        }
+                        sqlite3_finalize(msg_stmt);
+                    } else {
+                        std::cerr << "Error preparing select messages statement: " << sqlite3_errmsg(db) << std::endl;
+                    }
+
+                    std::cout << chat_history.dump(4) << std::endl;
+                } else {
+                    std::cout << "No chat history found for ID: " << chat_id << std::endl;
+                }
+                sqlite3_finalize(stmt);
+            } else {
+                std::cerr << "Error preparing select chat statement: " << sqlite3_errmsg(db) << std::endl;
+            }
         }
+        sqlite3_close(db);
+    } else {
+        std::cerr << "Error opening database: " << sqlite3_errmsg(db) << std::endl;
     }
 }
 
@@ -231,271 +278,6 @@ void handle_rm_command(const std::string &model_name) {
     }
 }
 
-// Helper function to convert chat history to string
-std::string chat_history_to_string(const std::vector<std::pair<std::string, std::string>> &chat_history) {
-    std::string result;
-    for (const auto &pair: chat_history) {
-        result += pair.first + ": " + pair.second + "\n";
-    }
-    return result;
-}
-
-// Function to send a streaming response
-void send_streaming_response(std::shared_ptr<tcp::socket> socket, const std::string &prompt_template,
-                             const std::string &path, const std::string &prompt, bool keep_alive, int version) {
-    http::response<http::empty_body> res{http::status::ok, version};
-    res.set(http::field::server, "Beast");
-    res.set(http::field::access_control_allow_origin, "*");
-    res.set(http::field::access_control_allow_headers, "content-type");
-    res.set(http::field::access_control_allow_methods, "POST");
-    res.set(http::field::content_type, "application/json");
-    res.set(http::field::transfer_encoding, "chunked");
-    res.keep_alive(keep_alive);
-
-    // Send the headers
-    http::serializer<false, http::empty_body> sr{res};
-    http::write_header(*socket, sr);
-
-    auto send_chunk = [socket](const std::string &data) {
-        std::string chunk = data;
-        std::stringstream ss;
-        ss << std::hex << chunk.size() << "\r\n" << chunk << "\r\n";
-        std::string formatted_chunk = ss.str();
-
-        boost::system::error_code ec;
-        boost::asio::write(*socket, boost::asio::buffer(formatted_chunk), ec);
-        if (ec) {
-            std::cerr << "Error sending chunk: " << ec.message() << std::endl;
-            return false;
-        }
-        return true;
-    };
-
-    auto token_callback = [&send_chunk](const std::string &token) -> bool {
-        std::string json_chunk = "{\"chunk\": \"" + token + "\"}";
-        return send_chunk(json_chunk);
-    };
-
-    chat_with_api_stream(prompt_template, path, prompt, token_callback);
-
-    // Send the final chunk to indicate the end of the stream
-    send_chunk("[DONE]");
-
-    // Send the terminating chunk
-    boost::system::error_code ec;
-    boost::asio::write(*socket, boost::asio::buffer("0\r\n\r\n"), ec);
-    if (ec) {
-        std::cerr << "Error sending terminating chunk: " << ec.message() << std::endl;
-    }
-}
-
-// Function to send a non-streaming response
-void send_non_streaming_response(std::shared_ptr<tcp::socket> socket, const std::string &prompt_template,
-                                 const std::string &path, const std::string &prompt, bool keep_alive, int version) {
-    std::string api_response = chat_with_api(prompt_template, path, prompt);
-
-    boost::property_tree::ptree response_pt;
-    response_pt.put("response", api_response);
-    std::ostringstream json_response_stream;
-    boost::property_tree::write_json(json_response_stream, response_pt);
-    std::string json_response = json_response_stream.str();
-
-    http::response<http::string_body> res{http::status::ok, version};
-    res.set(http::field::server, "Beast");
-    res.set(http::field::access_control_allow_origin, "*");
-    res.set(http::field::access_control_allow_headers, "content-type");
-    res.set(http::field::access_control_allow_methods, "POST");
-    res.set(http::field::content_type, "application/json");
-    res.body() = json_response;
-    res.prepare_payload();
-    res.keep_alive(keep_alive);
-
-    http::write(*socket, res);
-}
-
-// Function to send a bad request response
-void send_bad_request(std::shared_ptr<tcp::socket> socket, bool keep_alive, int version) {
-    http::response<http::string_body> res{http::status::bad_request, version};
-    res.set(http::field::server, "Beast");
-    res.set(http::field::content_type, "application/json");
-    res.body() = R"({"error": "Invalid request"})";
-    res.prepare_payload();
-    res.keep_alive(keep_alive);
-
-    http::write(*socket, res);
-}
-
-// Function to send an internal server error response
-void send_internal_server_error(std::shared_ptr<tcp::socket> socket) {
-    http::response<http::string_body> res{http::status::internal_server_error, 11};
-    res.set(http::field::server, "Beast");
-    res.set(http::field::content_type, "application/json");
-    res.body() = R"({"error": "Internal server error"})";
-    res.prepare_payload();
-
-    http::write(*socket, res);
-}
-
-// Function to handle /api/generate requests
-void handle_generate_request(std::shared_ptr<tcp::socket> socket, const http::request<http::dynamic_body> &req,
-                             bool keep_alive) {
-    std::string body = beast::buffers_to_string(req.body().data());
-    std::istringstream json_stream(body);
-    boost::property_tree::ptree pt;
-    boost::property_tree::read_json(json_stream, pt);
-
-    std::string model_name = pt.get<std::string>("model");
-    std::string prompt = pt.get<std::string>("prompt");
-    bool stream = pt.get<bool>("stream");
-
-    std::cout << model_name << std::endl;
-    std::cout << prompt << std::endl;
-
-    json data = model_data(model_name);
-    std::string path;
-    std::string prompt_template = data["promptTemplate"].get<std::string>();
-
-    sqlite3 *db;
-    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-        path = DatabaseManager::get_path_by_model_name(db, model_name);
-        sqlite3_close(db);
-    }
-
-    if (stream) {
-        send_streaming_response(socket, prompt_template, path, prompt, keep_alive, req.version());
-    } else {
-        send_non_streaming_response(socket, prompt_template, path, prompt, keep_alive, req.version());
-    }
-}
-
-// Function to handle /api/chat requests
-void handle_chat_request(std::shared_ptr<tcp::socket> socket, const http::request<http::dynamic_body> &req,
-                         bool keep_alive) {
-    std::string body = beast::buffers_to_string(req.body().data());
-    std::istringstream json_stream(body);
-    boost::property_tree::ptree pt;
-    boost::property_tree::read_json(json_stream, pt);
-
-    std::string model_name = pt.get<std::string>("model");
-    bool stream = pt.get<bool>("stream");
-
-    // Extract chat history
-    std::vector<std::pair<std::string, std::string>> chat_history;
-    for (const auto &item: pt.get_child("messages")) {
-        std::string role = item.second.get<std::string>("role");
-        std::string prompt = item.second.get<std::string>("prompt");
-        chat_history.emplace_back(role, prompt);
-    }
-
-    // Convert chat history to string
-    std::string chat_history_str = chat_history_to_string(chat_history);
-
-    std::string path;
-    std::string prompt_template = model_data(model_name)["promptTemplate"].get<std::string>();
-
-    sqlite3 *db;
-    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-        path = DatabaseManager::get_path_by_model_name(db, model_name);
-        sqlite3_close(db);
-    }
-
-    if (stream) {
-        send_streaming_response(socket, prompt_template, path, chat_history_str, keep_alive, req.version());
-    } else {
-        send_non_streaming_response(socket, prompt_template, path, chat_history_str, keep_alive, req.version());
-    }
-}
-
-// Function to handle HTTP requests
-void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buffer) {
-    try {
-        // Read the request
-        http::request<http::dynamic_body> req;
-        http::read(*socket, buffer, req);
-
-        // Set Keep-Alive
-        bool keep_alive = req.keep_alive();
-
-        if (req.method() == http::verb::options) {
-            http::response<http::empty_body> res{http::status::no_content, req.version()};
-            res.set(http::field::server, "Beast");
-            res.set(http::field::access_control_allow_origin, "*");
-            res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
-            res.set(http::field::access_control_allow_headers, "Content-Type");
-            res.keep_alive(req.keep_alive());
-
-            http::write(*socket, res);
-            return;
-        }
-
-        if (req.method() == http::verb::post && req.target() == "/api/generate") {
-            handle_generate_request(socket, req, keep_alive);
-        } else if (req.method() == http::verb::post && req.target() == "/api/chat") {
-            handle_chat_request(socket, req, keep_alive);
-        } else {
-            send_bad_request(socket, keep_alive, req.version());
-        }
-
-        if (!keep_alive) {
-            socket->shutdown(tcp::socket::shutdown_send);
-        }
-
-    } catch (const std::exception &e) {
-        std::cerr << "Error handling request: " << e.what() << std::endl;
-        send_internal_server_error(socket);
-    }
-}
-
-
-// Function to start the web server
-std::string handle_server() {
-    try {
-        std::string address = "0.0.0.0";
-        unsigned short port = 8080;
-
-        net::io_context ioc;
-        tcp::acceptor acceptor{ioc, {net::ip::make_address(address), port}};
-
-        std::cout << "Server started on " << address << ":" << port << std::endl;
-
-        const int num_threads = std::thread::hardware_concurrency();
-        std::vector<std::thread> thread_pool;
-
-        for (int i = 0; i < num_threads; ++i) {
-            thread_pool.emplace_back([&ioc]() { ioc.run(); });
-        }
-
-        for (;;) {
-            auto socket = std::make_shared<tcp::socket>(ioc);
-            acceptor.accept(*socket);
-
-            std::cout << "New connection accepted from " << socket->remote_endpoint() << std::endl;
-
-            beast::flat_buffer buffer;
-
-            std::thread{[socket, buffer]() mutable {
-                try {
-                    handle_request(socket, std::move(buffer));
-                } catch (const std::exception &e) {
-                    std::cerr << "Error in request handler thread: " << e.what() << std::endl;
-                }
-            }}.detach();
-        }
-
-        for (auto &thread: thread_pool) {
-            thread.join();
-        }
-
-    } catch (const std::exception &e) {
-        std::cerr << "Server error: " << e.what() << std::endl;
-        return "Error: " + std::string(e.what());
-    }
-
-    return "Server stopped";
-}
-
 void handle_show_command(const std::string &model_name) {
     json data = model_data(model_name);
     std::cout << data.dump(4) << std::endl;
@@ -504,10 +286,10 @@ void handle_show_command(const std::string &model_name) {
 void handle_serve_command(const std::string &model_name) {
     std::thread serv_thread(handle_server);
     std::thread run_model_thread(handle_run_command, model_name);
-//    std::thread endpoint_threads(endpoints);
+    std::thread endpoint_threads(endpoints);
     serv_thread.join();
     run_model_thread.join();
-//    endpoint_threads.join();
+    endpoint_threads.join();
 }
 
 void show_commands(int argc, char **argv) {
@@ -618,8 +400,7 @@ void show_commands(int argc, char **argv) {
                     std::cout << "  ./phoenix serve [model_name]" << std::endl;
                     return;
                 }
-//                handle_serve_command(argv[i + 1]);
-                endpoints();
+                handle_serve_command(argv[i + 1]);
                 return;
             }
 
