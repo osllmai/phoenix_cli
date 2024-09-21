@@ -1,3 +1,5 @@
+#include "api.h"
+
 #include "api/include/crow_all.h"
 #include "api/include/routes/auth.h"
 #include "api/include/routes/profile.h"
@@ -35,9 +37,9 @@ void endpoints() {
     auto &cors = app.get_middleware<crow::CORSHandler>();
     cors
     .global()
-    .headers("Content-Type", "Authorization")
+    .headers("Content-Type", "Authorization", "Transfer-Encoding", "Connection")
     .methods("POST"_method, "GET"_method, "PUT"_method, "DELETE"_method, "PATCH"_method)
-    .origin("http://localhost:3001");
+    .origin("*");
 
 
 
