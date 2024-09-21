@@ -1,10 +1,9 @@
 #include "web_server.h"
-#include "database_manager.h"
+#include "chat.h"
 #include "directory_manager.h"
 #include "models_list.h"
+#include "download_model.h"
 
-#include <iostream>
-#include <thread>
 #include <atomic>
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -25,9 +24,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <chat.cc>
-
-
 
 namespace fs = std::filesystem;
 namespace beast = boost::beast;
@@ -36,7 +32,6 @@ namespace net = boost::asio;
 
 using json = nlohmann::json;
 using tcp = net::ip::tcp;
-
 
 // Helper function to convert chat history to string
 std::string chat_history_to_string(const std::vector<std::pair<std::string, std::string>> &chat_history) {
@@ -83,7 +78,7 @@ void send_streaming_response(std::shared_ptr<tcp::socket> socket, const std::str
         return send_chunk(json_chunk);
     };
 
-    chat_with_api_stream(prompt_template, path, prompt, token_callback);
+    PhoenixChat::chat_with_api_stream(prompt_template, path, prompt, token_callback);
 
     // Send the final chunk to indicate the end of the stream
     send_chunk("[DONE]");
@@ -99,7 +94,7 @@ void send_streaming_response(std::shared_ptr<tcp::socket> socket, const std::str
 // Function to send a non-streaming response
 void send_non_streaming_response(std::shared_ptr<tcp::socket> socket, const std::string &prompt_template,
                                  const std::string &path, const std::string &prompt, bool keep_alive, int version) {
-    std::string api_response = chat_with_api(prompt_template, path, prompt);
+    std::string api_response = PhoenixChat::chat_with_api(prompt_template, path, prompt);
 
     boost::property_tree::ptree response_pt;
     response_pt.put("response", api_response);
@@ -224,6 +219,18 @@ void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buff
 
         // Set Keep-Alive
         bool keep_alive = req.keep_alive();
+
+        if (req.method() == http::verb::options) {
+            http::response<http::empty_body> res{http::status::no_content, req.version()};
+            res.set(http::field::server, "Beast");
+            res.set(http::field::access_control_allow_origin, "*");
+            res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
+            res.set(http::field::access_control_allow_headers, "Content-Type");
+            res.keep_alive(req.keep_alive());
+
+            http::write(*socket, res);
+            return;
+        }
 
         if (req.method() == http::verb::post && req.target() == "/api/generate") {
             handle_generate_request(socket, req, keep_alive);

@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase/browser-client"
-import { TablesInsert, TablesUpdate } from "@/supabase/types"
+import {supabase} from "@/lib/supabase/browser-client"
+import {TablesInsert, TablesUpdate} from "@/supabase/types"
 
 export const getHomeWorkspaceByUserId = async (userId: string) => {
   const { data: homeWorkspace, error } = await supabase
@@ -17,31 +17,50 @@ export const getHomeWorkspaceByUserId = async (userId: string) => {
 }
 
 export const getWorkspaceById = async (workspaceId: string) => {
-  const { data: workspace, error } = await supabase
-    .from("workspaces")
-    .select("*")
-    .eq("id", workspaceId)
-    .single()
+  const token = localStorage.getItem('access_token');
 
-  if (!workspace) {
-    throw new Error(error.message)
+  if (!token) {
+    throw new Error('No access token found');
   }
 
-  return workspace
-}
+  const response = await fetch(`http://localhost:18080/workspace/${workspaceId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': token,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to fetch workspace');
+  }
+
+  return await response.json();
+};
+
 
 export const getWorkspacesByUserId = async (userId: string) => {
-  const { data: workspaces, error } = await supabase
-    .from("workspaces")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
+  const token = localStorage.getItem('access_token');
 
-  if (!workspaces) {
-    throw new Error(error.message)
+  if (!token) {
+    throw new Error('No access token found');
   }
 
-  return workspaces
+  const response = await fetch(`http://localhost:18080/workspace`, {
+    method: 'GET',
+    headers: {
+      'Authorization': token,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Failed to fetch workspace');
+  }
+
+  return await response.json();
 }
 
 export const createWorkspace = async (

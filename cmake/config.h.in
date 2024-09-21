@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <crow/version.h>
+
 #define VERSION "@VERSION_MAJOR@" "." "@VERSION_MINOR@" "." "@VERSION_PATCH@"
 
 #endif // CONFIG_H

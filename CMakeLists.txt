@@ -1,35 +1,72 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 
-# Project name and version
-set(PROJECT_NAME phoenix)
-project(${PROJECT_NAME}
-        VERSION 0.0.3
-        LANGUAGES C CXX)
+# Project metadata
+project(phoenix
+        VERSION 0.0.5
+        LANGUAGES C CXX
+)
 
-# Set standards
+# CMake standards
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Define project-related names
-set(LIBRARY_NAME Lib)
+# Library and Executable names
+set(LIBRARY_NAME phoenix_lib)
 set(EXECUTABLE_NAME phoenix_cli)
 
 # CMake module path and submodules
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/")
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 include(AddGitSubmodule)
 include(FetchContent)
 
-# Configure vcpkg (add this near the top of the file)
+# Vcpkg integration
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
             CACHE STRING "")
 endif()
-# Find Boost (add this after the vcpkg configuration)
+
+# Dependencies
 find_package(Boost 1.85 REQUIRED COMPONENTS system filesystem)
 
+# Fetch ASIO
+FetchContent_Declare(
+        asio
+        GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+        GIT_TAG        asio-1-31-0
+        GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(asio)
 
+# Fetch Crow
+FetchContent_Declare(
+        crow
+        GIT_REPOSITORY https://github.com/CrowCpp/Crow.git
+        GIT_TAG        v1.0+5
+        GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(crow)
+
+# Fetch jwt-cpp
+FetchContent_Declare(
+        jwt-cpp
+        GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
+        GIT_TAG        v0.7.0
+        GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(jwt-cpp)
+
+# Fetch sqlite_modern_cpp
+FetchContent_Declare(
+        sqlite_modern_cpp
+        GIT_REPOSITORY https://github.com/SqliteModernCpp/sqlite_modern_cpp.git
+        GIT_TAG        v3.2
+        GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(sqlite_modern_cpp)
+
+# Fetch nlohmann_json
 FetchContent_Declare(
         nlohmann_json
         GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -39,89 +76,86 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nlohmann_json)
 
 # macOS specific configurations
-if (APPLE)
+if(APPLE)
     option(OLD_MACOS "Using old macOS" OFF)
     option(BUILD_UNIVERSAL "Build a Universal binary on macOS" ON)
-    if (BUILD_UNIVERSAL AND NOT OLD_MACOS)
-        set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
-    else ()
-        set(CMAKE_OSX_ARCHITECTURES "${CMAKE_HOST_SYSTEM_PROCESSOR}" CACHE STRING "" FORCE)
-    endif ()
-    if (OLD_MACOS)
-        add_definitions(-DOLD_MACOS)
-    endif ()
-endif ()
 
-# Versioning
+    if(BUILD_UNIVERSAL AND NOT OLD_MACOS)
+        set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
+    else()
+        set(CMAKE_OSX_ARCHITECTURES "${CMAKE_HOST_SYSTEM_PROCESSOR}" CACHE STRING "" FORCE)
+    endif()
+
+    if(OLD_MACOS)
+        add_compile_definitions(OLD_MACOS)
+    endif()
+endif()
+
+# Project versioning
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 0)
 set(VERSION_PATCH 5)
-set(V ERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+set(PROJECT_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
+# Compile options
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 
-# Determine if this is a standalone build
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+# Standalone build check
+set(LLAMA_STANDALONE OFF)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(LLAMA_STANDALONE ON)
-else ()
-    set(LLAMA_STANDALONE OFF)
-endif ()
+endif()
 
 # Processor options
 option(AVX2 "Enable AVX2" ON)
 option(AVX512 "Enable AVX512" OFF)
-
-option(LLAMA_AVX "llama: Enable AVX" ON)
-option(LLAMA_AVX2 "llama: Enable AVX2" ${AVX2})
-option(LLAMA_AVX512 "llama: Enable AVX512" ${AVX512})
-option(LLAMA_AVX512_VBMI "llama: Enable AVX512-VBMI" ${AVX512})
-option(LLAMA_AVX512_VNNI "llama: Enable AVX512-VNNI" ${AVX512})
-option(LLAMA_FMA "llama: Enable FMA" ${AVX2})
+option(LLAMA_AVX "Enable AVX" ON)
+option(LLAMA_AVX2 "Enable AVX2" ${AVX2})
+option(LLAMA_AVX512 "Enable AVX512" ${AVX512})
+option(LLAMA_AVX512_VBMI "Enable AVX512-VBMI" ${AVX512})
+option(LLAMA_AVX512_VNNI "Enable AVX512-VNNI" ${AVX512})
+option(LLAMA_FMA "Enable FMA" ${AVX2})
 
 # Sanitizers
-if (GGML_SANITIZE_THREAD)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
-endif ()
+if(GGML_SANITIZE_THREAD)
+    add_compile_options(-fsanitize=thread)
+endif()
 
-if (GGML_SANITIZE_ADDRESS)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-endif ()
+if(GGML_SANITIZE_ADDRESS)
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+endif()
 
-if (GGML_SANITIZE_UNDEFINED)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
-endif ()
+if(GGML_SANITIZE_UNDEFINED)
+    add_compile_options(-fsanitize=undefined)
+endif()
 
-if (AVX512)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx512vl")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512vl")
-endif ()
+if(AVX512)
+    add_compile_options(-mavx512vl)
+endif()
 
-# Find Threads package
+# Find threads package
 find_package(Threads REQUIRED)
 
-# Linker flags for different platforms
-if (APPLE)
+# Platform-specific linker flags
+if(APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-search_paths_first -lSystem")
-elseif (UNIX)
-    if (NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+elseif(UNIX)
+    if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
-    endif ()
-elseif (WIN32)
+    endif()
+elseif(WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
-endif ()
+endif()
 
-# Generate a header file with the version number
+# Generate header file with version number
 configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in"
         "${CMAKE_CURRENT_BINARY_DIR}/config.h"
 )
 
-# Include the binary directory for the generated header file
+# Include the binary directory for generated header
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 # Add subdirectories
@@ -129,39 +163,37 @@ add_subdirectory(phoenix)
 add_subdirectory(src)
 add_subdirectory(app)
 
-
-# -------- install --------#
+# Installation configuration
 include(InstallRequiredSystemLibraries)
 
-# Determine the system
-if (APPLE)
+# System detection for packaging
+if(APPLE)
     set(CPACK_SYSTEM_NAME "macOS")
-elseif (WIN32)
+elseif(WIN32)
     set(CPACK_SYSTEM_NAME "Windows")
-elseif (UNIX AND NOT APPLE)
+elseif(UNIX AND NOT APPLE)
     set(CPACK_SYSTEM_NAME "Linux")
-endif ()
+endif()
 
+# Vulkan for Windows
 if(WIN32)
     set(VULKAN_SDK $ENV{VULKAN_SDK})
     if(VULKAN_SDK)
-        set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} "${VULKAN_SDK}")
+        list(APPEND CMAKE_PREFIX_PATH "${VULKAN_SDK}")
     endif()
-    # Find Vulkan package
     find_package(Vulkan REQUIRED)
 endif()
 
-
-# Common settings
+# Common packaging settings
 set(CPACK_PACKAGE_NAME "Phoenix")
-set(CPACK_PACKAGE_VERSION ${VERSION})
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_VENDOR "Your Company Name")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Phoenix Application")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "Phoenix")
 
-# macOS specific configurations
-if (APPLE)
+# Platform-specific packaging configurations
+if(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
     set(CPACK_DMG_FORMAT "UDZO")
     set(CPACK_DMG_VOLUME_NAME "PhoenixInstaller")
@@ -170,8 +202,8 @@ if (APPLE)
     set(MACOSX_BUNDLE_EXECUTABLE_NAME ${EXECUTABLE_NAME})
     set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.yourcompany.phoenix")
     set(MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_NAME})
-    set(MACOSX_BUNDLE_SHORT_VERSION_STRING ${VERSION})
-    set(MACOSX_BUNDLE_BUNDLE_VERSION ${VERSION})
+    set(MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION})
+    set(MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
     set(MACOSX_BUNDLE_COPYRIGHT "Your Company © ${VERSION_YEAR}")
 
     # Disable DS_Store settings
@@ -185,7 +217,6 @@ if (APPLE)
     install(FILES ${PROJECT_SOURCE_DIR}/resources/icon.icns DESTINATION "Phoenix.app/Contents/Resources")
     install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/ DESTINATION "Phoenix.app/Contents/MacOS")
 
-    # Configure and install the update_path script
     configure_file(
             "${CMAKE_SOURCE_DIR}/scripts/update_path.sh.in"
             "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh"
@@ -193,8 +224,7 @@ if (APPLE)
     )
     install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/update_path.sh" DESTINATION "$ENV{HOME}/Phoenix")
 
-    # Windows specific configurations
-elseif (WIN32)
+elseif(WIN32)
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_NSIS_PACKAGE_NAME "Phoenix")
     set(CPACK_NSIS_DISPLAY_NAME "Phoenix")
@@ -204,11 +234,11 @@ elseif (WIN32)
     set(CPACK_NSIS_CONTACT "your.email@example.com")
     set(CPACK_NSIS_MODIFY_PATH ON)
 
-    # Set the icon for the installer
+    # Set installer icon
     set(CPACK_NSIS_MUI_ICON "${PROJECT_SOURCE_DIR}/resources/phoenix.ico")
     set(CPACK_NSIS_MUI_UNIICON "${PROJECT_SOURCE_DIR}/resources/phoenix.ico")
 
-    # Create a desktop shortcut
+    # Create desktop shortcut
     set(CPACK_NSIS_CREATE_ICONS_EXTRA
             "CreateShortCut '$DESKTOP\\\\Phoenix.lnk' '$INSTDIR\\\\bin\\\\${EXECUTABLE_NAME}.exe'")
     set(CPACK_NSIS_DELETE_ICONS_EXTRA
@@ -219,24 +249,14 @@ elseif (WIN32)
     set(CPACK_NSIS_PACKAGE_NAME "Phoenix")
     set(CPACK_NSIS_UNINSTALL_NAME "Uninstall Phoenix")
 
-    # Install the icon
+    # Install resources and executable
     install(FILES ${PROJECT_SOURCE_DIR}/resources/phoenix.ico DESTINATION bin)
-    # Install the main executable
-    install(FILES ${CMAKE_BINARY_DIR}/bin/Debug/${EXECUTABLE_NAME}.exe
-            DESTINATION bin
-            PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-            GROUP_EXECUTE GROUP_READ
-            WORLD_EXECUTE WORLD_READ
-    )
-    install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/Debug/ DESTINATION bin)
+    install(TARGETS ${EXECUTABLE_NAME} DESTINATION bin)
 
-
-
-    # Install any additional DLLs or resources
+    # Install additional DLLs or resources as needed
     # install(FILES ${PROJECT_SOURCE_DIR}/path/to/additional/dll DESTINATION bin)
 
-    # Linux specific configurations
-elseif (UNIX AND NOT APPLE)
+elseif(UNIX AND NOT APPLE)
     set(CPACK_GENERATOR "DEB;RPM")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name <your.email@example.com>")
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
@@ -245,16 +265,15 @@ elseif (UNIX AND NOT APPLE)
     set(CPACK_RPM_PACKAGE_GROUP "Applications/Productivity")
     set(CPACK_RPM_PACKAGE_REQUIRES "libstdc++ >= 4.8")
 
-    # Install the main executable
-    install(TARGETS ${EXECUTABLE_NAME} DESTINATION bin)
-
     # Install desktop file and icon for Linux
+    install(TARGETS ${EXECUTABLE_NAME} DESTINATION bin)
     install(FILES "${PROJECT_SOURCE_DIR}/resources/phoenix.desktop" DESTINATION share/applications)
     install(FILES "${PROJECT_SOURCE_DIR}/resources/phoenix.png" DESTINATION share/icons/hicolor/256x256/apps)
-endif ()
+endif()
 
-# Common installation for all platforms
+# Common installation files
 install(FILES ${PROJECT_SOURCE_DIR}/LICENSE.txt DESTINATION share/doc/phoenix)
 install(FILES ${PROJECT_SOURCE_DIR}/README.md DESTINATION share/doc/phoenix)
 
+# Include CPack for packaging
 include(CPack)
