@@ -1,10 +1,5 @@
 #pragma once
 
-#ifndef HEADER_H
-#define HEADER_H
-
-
-
 #include <cstdio>
 
 #include <cassert>
@@ -117,12 +112,10 @@ struct ConsoleState {
 const std::string APPNAME = "phoenix-cli";
 
 //utils.h functions
-void set_console_color(ConsoleState &con_st, ConsoleColor color);
-std::string random_prompt(int32_t seed);
-void print_usage(int argc, char** argv, const chatParams& params);
-bool parse_params(int argc, char** argv, chatParams& params);
+//void set_console_color(ConsoleState &con_st, ConsoleColor color);
+//std::string random_prompt(int32_t seed);
+//void print_usage(int argc, char** argv, const chatParams& params);
+//bool parse_params(int argc, char** argv, chatParams& params);
 
 //parse_json.h functions
-void get_params_from_json(chatParams& params);
-
-#endif
+//void get_params_from_json(chatParams& params);
