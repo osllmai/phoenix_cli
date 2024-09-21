@@ -20,6 +20,13 @@ struct UserModel {
     std::string name;
 };
 
+
+struct UserLocalModel {
+    int id;
+    std::string model_name;
+    std::string path;
+};
+
 namespace models {
     class Model {
     public:
@@ -35,6 +42,10 @@ namespace models {
 
         static std::vector<UserModel> get_models_by_workspace_id(const int &workspace_id);
 
+        static std::vector<UserLocalModel> get_local_models();
+
         static void to_json(json &j, const UserModel &model);
+
+        static void local_model_to_json(json &j, const UserLocalModel &model);
     };
 }

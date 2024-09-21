@@ -29,5 +29,9 @@ namespace routes {
                 [](const crow::request &req, const int &workspace_id) {
                     return controllers::get_models_by_workspace_id(req, workspace_id);
                 });
+
+        CROW_ROUTE(app, "/model/local").methods("GET"_method)([](const crow::request &req) {
+            return controllers::get_local_models(req);
+        });
     }
 }

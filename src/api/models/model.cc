@@ -120,6 +120,20 @@ namespace models {
         return result;
     }
 
+    std::vector<UserLocalModel> Model::get_local_models() {
+        std::vector<UserLocalModel> local_models;
+
+        try {
+            db << "SELECT * FROM tbl_models;" >> [&](int id, std::string model_name, std::string path) {
+                UserLocalModel local_model{id, model_name, path};
+                local_models.push_back(local_model);
+            };
+        } catch (const std::exception &e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+        }
+        return local_models;
+    }
+
     void Model::to_json(json &j, const UserModel &model) {
         j = json{
                 {"id",          model.id},
@@ -133,6 +147,14 @@ namespace models {
                 {"description", model.description},
                 {"model_id",    model.model_id},
                 {"name",        model.name}
+        };
+    };
+
+    void Model::local_model_to_json(json &j, const UserLocalModel &model) {
+        j = json{
+                {"id",         model.id},
+                {"model_name", model.model_name},
+                {"path",       model.path}
         };
     };
 }

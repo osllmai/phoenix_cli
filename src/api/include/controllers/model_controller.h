@@ -15,4 +15,7 @@ namespace controllers {
     crow::response get_models(const crow::request &req);
 
     crow::response get_models_by_workspace_id(const crow::request &req, const int &workspace_id);
+
+    crow::response get_local_models(const crow::request &req);
+
 }

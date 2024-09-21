@@ -205,4 +205,24 @@ namespace controllers {
 
         return crow::response(200, response.dump());
     }
+
+    crow::response get_local_models(const crow::request &req) {
+        auto auth_header = req.get_header_value("Authorization");
+        if(auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        std::vector<UserLocalModel> local_models = models::Model::get_local_models();
+
+        json response = json::array();
+
+        for (const auto &local_model : local_models) {
+            json j;
+            models::Model::local_model_to_json(j, local_model);
+            response.push_back(j);
+        }
+
+        return crow::response(200, response.dump());
+
+    }
 }
