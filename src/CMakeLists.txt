@@ -49,6 +49,9 @@ set(LIBRARY_SOURCES
         "commands_list.cc"
         "download_model.cc"
         "database_manager.cc"
+        "parse_json.cc"
+        "utils.cc"
+        "web_server.cc"
         "api/api.cc"
         "api/models/database.cc"
         "api/utils/utils.cc"
@@ -137,6 +140,7 @@ set(LIBRARY_SOURCES
 
 set(LIBRARY_HEADERS
         "${PROJECT_SOURCE_DIR}/phoenix/llmodel.h"
+        "chat.h"
         "commands_list.h"
         "models_list.h"
         "download_model.h"
@@ -146,6 +150,7 @@ set(LIBRARY_HEADERS
         "directory_manager.h"
         "chat_manager.h"
         "database_manager.h"
+        "web_server.h"
         "api/include/crow_all.h"
         "api/include/utils/utils.h"
         "api/include/models/database.h"
@@ -230,6 +235,7 @@ set(LIBRARY_HEADERS
         "api/include/routes/model.h"
         "api/include/routes/model_workspace.h"
         "api/include/routes/streaming.h"
+        "api/api.h"
 )
 
 # Include directories
