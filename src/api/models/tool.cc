@@ -90,11 +90,10 @@ namespace models {
         std::vector<UserTool> result;
 
         try {
-            db << "SELECT t.id, t.user_id, t.folder_id, t.created_at, t.updated_at, t.sharing, t.description, "
-                  "t.name, t.schema, t.url "
-                  "FROM tools t "
-                  "JOIN tool_workspaces tw ON t.id = tw.tool_id "
-                  "WHERE tw.workspace_id = ?;"
+            db << "SELECT tools.* "
+                  "FROM tools "
+                  "JOIN folders ON tools.folder_id = folders.id "
+                  "WHERE folders.workspace_id = ?;"
                << workspace_id
                >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
                       std::string sharing, std::string description, std::string name, std::string schema, std::string url) {

@@ -179,8 +179,6 @@ namespace controllers {
             return crow::response(401, "No Authorization header provided");
         }
         try {
-            json request_body = json::parse(req.body);
-
             if (verify_jwt(auth_header)) {
                 auto user_id_opt = get_user_id_from_token(auth_header);
 
