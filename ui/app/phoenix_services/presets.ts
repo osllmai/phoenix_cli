@@ -4,12 +4,19 @@ import api from './api';
 export interface Preset {
   id: number;
   name: string;
-  settings: Record<string, any>;
-  workspace_id: number;
+  folder_id: number;
   user_id: string;
   created_at?: string;
   updated_at?: string;
-  // Add other preset fields as needed
+  sharing: string;
+  context_length: number;
+  description: string;
+  embedding_provider: string;
+  include_profile_context: boolean;
+  include_workspace_instructions: boolean;
+  model: string;
+  prompt: string;
+  temperature: number;
 }
 
 export const getPresetsByWorkspaceId = async (workspaceId: string): Promise<Preset[]> => {

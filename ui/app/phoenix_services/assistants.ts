@@ -7,13 +7,13 @@ export const getAssistantWorkspacesByWorkspaceId = async (
 ): Promise<Assistant[]> => {
   // Fetch assistant-workspace relationships
   const response = await api.get<{ assistant_id: number }[]>(
-    `/assistant_workspace/${workspaceId}`
+    `/assistant/by-workspace/${workspaceId}`
   );
   const assistantWorkspaces = response.data;
 
   // Fetch details of each assistant
   const assistantPromises = assistantWorkspaces.map(async (aw) => {
-    const assistantResponse = await api.get<Assistant>(`/assistant/${aw.assistant_id}`);
+    const assistantResponse = await api.get<Assistant>(`/assistant/by-workspace/${aw.assistant_id}`);
     return assistantResponse.data;
   });
 

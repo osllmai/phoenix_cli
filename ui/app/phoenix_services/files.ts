@@ -4,13 +4,16 @@ import api from './api';
 export interface File {
   id: number;
   name: string;
-  path: string;
+  file_path: string;
   size: number;
-  workspace_id: number;
+  folder_id: number;
   user_id: string;
   created_at?: string;
   updated_at?: string;
-  // Add other file fields as needed
+  tokens: number;
+  type: string;
+  description: string;
+  sharing: string;
 }
 
 export const getFilesByWorkspaceId = async (workspaceId: string): Promise<File[]> => {
