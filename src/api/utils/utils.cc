@@ -4,6 +4,9 @@
 #include <sstream>
 #include <crow.h>
 #include <jwt-cpp/jwt.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 
 std::string get_current_time() {
@@ -74,4 +77,14 @@ bool verify_jwt(const std::string &token) {
         CROW_LOG_ERROR << "JWT verification failed: " << e.what();
         return false;
     }
+}
+
+// Serialize the vector of image paths to a JSON string
+std::string serialize_image_paths(const std::vector<std::string>& image_paths) {
+    return json(image_paths).dump();
+}
+
+// Deserialize the JSON string to a vector of image paths
+std::vector<std::string> deserialize_image_paths(const std::string& image_paths_str) {
+    return json::parse(image_paths_str).get<std::vector<std::string>>();
 }
