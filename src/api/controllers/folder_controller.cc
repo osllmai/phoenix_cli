@@ -182,7 +182,7 @@ namespace controllers {
         }
     }
 
-    crow::response get_folders_by_workspace_id(const crow::request &req) {
+    crow::response get_folders_by_workspace_id(const crow::request &req, const int &workspace_id) {
         auto auth_header = req.get_header_value("Authorization");
         if (auth_header.empty()) {
             return crow::response(401, "No Authorization header provided");
@@ -190,13 +190,6 @@ namespace controllers {
 
         try {
             std::vector<UserFolder> folders;
-            json request_body = json::parse(req.body);
-            int workspace_id = request_body.value("workspace_id", 0);
-
-            if (workspace_id == 0) {
-                return crow::response(422, "Workspace id must sent");
-            }
-
             std::vector<UserFolder> user_folders = models::Folder::user_folders_by_workspace(workspace_id);
 
             if (user_folders.empty()) {

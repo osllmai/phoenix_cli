@@ -26,8 +26,8 @@ namespace routes {
             return controllers::get_folders_by_user_id(req);
         });
 
-        CROW_ROUTE(app, "/folder/by_workspace").methods("GET"_method)([](const crow::request &req) {
-            return controllers::get_folders_by_workspace_id(req);
+        CROW_ROUTE(app, "/folder/by-workspace/<int>").methods("GET"_method)([](const crow::request &req, const int &workspace_id) {
+            return controllers::get_folders_by_workspace_id(req, workspace_id);
         });
 
     }
