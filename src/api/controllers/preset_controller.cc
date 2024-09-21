@@ -191,8 +191,6 @@ namespace controllers {
         }
 
         try {
-            json request_body = json::parse(req.body);
-
             auto get_user_id = get_user_id_from_token(auth_header);
             std::string user_id = *get_user_id;
 

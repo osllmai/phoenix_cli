@@ -103,12 +103,10 @@ namespace models {
     std::vector<Preset> PresetModel::get_presets_by_workspace_id(const int &workspace_id) {
         std::vector<Preset> result;
         try {
-            db << "SELECT p.id, p.user_id, p.folder_id, p.created_at, p.updated_at, p.sharing, p.context_length, "
-                  "p.description, p.embeddings_provider, p.include_profile_context, p.include_workspace_instructions, "
-                  "p.model, p.name, p.prompt, p.temperature "
-                  "FROM presets p "
-                  "JOIN preset_workspaces pw ON p.id = pw.preset_id "
-                  "WHERE pw.workspace_id = ?;"
+            db << "SELECT presets.* "
+                  "FROM presets "
+                  "JOIN folders ON presets.folder_id = folders.id "
+                  "WHERE folders.workspace_id = ?;"
                << workspace_id
                >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
                       std::string sharing, int context_length, std::string description, std::string embeddings_provider,
