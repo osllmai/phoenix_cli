@@ -62,7 +62,6 @@ namespace controllers {
         }
 
         try {
-            json request_body = json::parse(req.body);
 
             auto get_user_id = get_user_id_from_token(auth_header);
             std::string user_id = *get_user_id;
@@ -162,5 +161,39 @@ namespace controllers {
         models::AssistantTool::to_json(response, assistant_tool);
 
         return crow::response(200, response.dump());
+    }
+
+    crow::response get_assistant_tools_by_assistant_id(const crow::request &req, const int &assistant_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        try {
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
+            if (user_id.empty()) {
+                return crow::response(400, "User ID must be provided");
+            }
+
+            std::vector<UserAssistantTool> assistant_tools = models::AssistantTool::get_assistant_tools_by_assistant_id(
+                    assistant_id);
+
+            json assistant_tools_json = json::array();
+            for (const auto &assistant_tool: assistant_tools) {
+                json assistant_tool_json;
+                models::AssistantTool::to_json(assistant_tool_json, assistant_tool);
+                assistant_tools_json.push_back(assistant_tool_json);
+            }
+
+            return crow::response(200, assistant_tools_json.dump());
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during get_assistant_tools: " << e.what();
+            return crow::response(500, "Error during get_assistant_tools: " + std::string(e.what()));
+        }
     }
 }
