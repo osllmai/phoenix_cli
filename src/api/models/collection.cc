@@ -86,10 +86,10 @@ namespace models {
         std::vector<UserCollection> result;
 
         try {
-            db << "SELECT c.id, c.user_id, c.folder_id, c.created_at, c.updated_at, c.sharing, c.name, c.content "
-                  "FROM collections c "
-                  "JOIN collection_workspaces cw ON c.id = cw.collection_id "
-                  "WHERE cw.workspace_id = ?;"
+            db << "SELECT collections.* "
+                  "FROM collections "
+                  "JOIN folders ON collections.folder_id = folders.id "
+                  "WHERE folders.workspace_id = ?;"
                << workspace_id
                >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
                       std::string sharing, std::string description, std::string name) {
