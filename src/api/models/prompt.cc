@@ -85,11 +85,10 @@ namespace models {
         std::vector<UserPrompt> result;
 
         try {
-            db << "SELECT p.id, p.user_id, p.folder_id, p.created_at, p.updated_at, p.sharing, p.name, p.content "
-                  "FROM prompts p "
-                  "JOIN prompt_workspaces pw ON p.id = pw.prompt_id "
-                  "JOIN folders f ON pw.folder_id = f.id "
-                  "WHERE f.workspace_id = ?;"
+            db << "SELECT prompts.* "
+                  "FROM prompts "
+                  "JOIN folders ON prompts.folder_id = folders.id "
+                  "WHERE folders.workspace_id = ?;"
                << workspace_id
                >> [&](int id, std::string user_id, int folder_id, std::string created_at, std::string updated_at,
                       std::string sharing, std::string content, std::string name) {
