@@ -127,11 +127,10 @@ namespace models {
     std::vector<UserFile> File::get_files_by_workspace_id(const int &workspace_id) {
         std::vector<UserFile> files;
         try {
-            db << "SELECT f.id, f.user_id, f.folder_id, f.created_at, f.updated_at, f.sharing, f.description, "
-                  "f.file_path, f.name, f.size, f.tokens, f.type "
-                  "FROM files f "
-                  "JOIN folders fo ON f.folder_id = fo.id "
-                  "WHERE fo.workspace_id = ?;"
+            db << "SELECT files.* "
+                  "FROM files "
+                  "JOIN folders ON files.folder_id = folders.id "
+                  "WHERE folders.workspace_id = ?;"
                     << workspace_id
                     >> [&](const int &id, const std::string &user_id, const int &folder_id,
                            const std::string &created_at, const std::string &updated_at, const std::string &sharing,

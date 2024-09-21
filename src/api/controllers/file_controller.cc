@@ -231,12 +231,12 @@ namespace controllers {
         }
 
         try {
-            json request_body = json::parse(req.body);
-            int folder_id = request_body.value("folder_id", 0);
-
-            if (folder_id == 0) {
-                return crow::response(422, "Workspace ID must be sent");
-            }
+//            json request_body = json::parse(req.body);
+//            int folder_id = request_body.value("folder_id", 0);
+//
+//            if (folder_id == 0) {
+//                return crow::response(422, "Workspace ID must be sent");
+//            }
 
             std::vector<UserFile> user_files = models::File::get_files_by_workspace_id(workspace_id);
 
