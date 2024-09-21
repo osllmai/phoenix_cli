@@ -5,11 +5,11 @@ export interface Collection {
   id: number;
   name: string;
   description?: string;
-  workspace_id: number;
   user_id: string;
   created_at?: string;
   updated_at?: string;
-  // Add other collection fields as needed
+  folder_id: number;
+  sharing: string;
 }
 
 export const getCollectionsByWorkspaceId = async (workspaceId: string): Promise<Collection[]> => {

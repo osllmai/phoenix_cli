@@ -18,7 +18,7 @@ api.interceptors.request.use(
     const token = localStorage.getItem('access_token');
     if (token) {
       // Include the token in the Authorization header
-      config.headers.Authorization = token; // Adjust if your backend requires 'Bearer ' prefix
+      config.headers.Authorization = `Bearer ${token}`; // Adjust if your backend requires 'Bearer ' prefix
     }
     return config;
   },

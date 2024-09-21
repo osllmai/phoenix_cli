@@ -1,11 +1,23 @@
-import { LLM } from "@/types"
 import { FC } from "react"
-import { ModelIcon } from "./model-icon"
 import { IconInfoCircle } from "@tabler/icons-react"
+import { ModelIcon } from "./model-icon"
 import { WithTooltip } from "../ui/with-tooltip"
 
+export interface LLM {
+  modelId: string
+  modelName: string
+  provider: string
+  platformLink?: string
+  imageInput: boolean
+  hostedId?: number // Add hostedId if needed
+}
+
 interface ModelOptionProps {
-  model: LLM
+  model: {
+    modelId: string
+    modelName: string
+    provider: string
+  }
   onSelect: () => void
 }
 
@@ -14,20 +26,12 @@ export const ModelOption: FC<ModelOptionProps> = ({ model, onSelect }) => {
     <WithTooltip
       display={
         <div>
-          {model.provider !== "ollama" && model.pricing && (
+          {/* No pricing data is available from your API, so this section is removed */}
+          {model.provider === "custom" && (
             <div className="space-y-1 text-sm">
               <div>
-                <span className="font-semibold">Input Cost:</span>{" "}
-                {model.pricing.inputCost} {model.pricing.currency} per{" "}
-                {model.pricing.unit}
+                <span className="font-semibold">Provider:</span> Custom Model
               </div>
-              {model.pricing.outputCost && (
-                <div>
-                  <span className="font-semibold">Output Cost:</span>{" "}
-                  {model.pricing.outputCost} {model.pricing.currency} per{" "}
-                  {model.pricing.unit}
-                </div>
-              )}
             </div>
           )}
         </div>

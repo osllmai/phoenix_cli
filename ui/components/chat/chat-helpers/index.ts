@@ -23,6 +23,7 @@ import { log } from "console"
 import React from "react"
 import { toast } from "sonner"
 import { v4 as uuidv4 } from "uuid"
+import {number} from "property-information/lib/util/types";
 
 export const validateChatSettings = (
   chatSettings: ChatSettings | null,
@@ -95,7 +96,7 @@ export const createTempMessages = (
       assistant_id: null,
       content: messageContent,
       created_at: "",
-      id: uuidv4(),
+      id: number,
       image_paths: b64Images,
       model: chatSettings.model,
       role: "user",
@@ -112,7 +113,7 @@ export const createTempMessages = (
       assistant_id: selectedAssistant?.id || null,
       content: "",
       created_at: "",
-      id: uuidv4(),
+      id: number,
       image_paths: [],
       model: chatSettings.model,
       role: "assistant",
