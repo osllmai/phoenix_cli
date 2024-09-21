@@ -63,8 +63,6 @@ namespace controllers {
         }
 
         try {
-            json request_body = json::parse(req.body);
-
             auto get_user_id = get_user_id_from_token(auth_header);
             std::string user_id = *get_user_id;
 
@@ -75,9 +73,8 @@ namespace controllers {
             std::vector<UserMessage> user_messages = models::Message::messages(user_id);
 
             json messages_json = json::array();
-            for (const auto &message: user_messages) {
-                json message_json;
-                models::Message::to_json(message_json, message);
+            for (const auto &message : user_messages) {
+                json message_json = models::Message::to_json(message);
                 messages_json.push_back(message_json);
             }
 
@@ -164,8 +161,7 @@ namespace controllers {
                 return crow::response(404, "message not found");
             }
 
-            json response;
-            models::Message::to_json(response, user_message);
+            json response = models::Message::to_json(user_message);
 
             return crow::response(200, response.dump());
         } catch (json::exception &e) {
@@ -174,6 +170,37 @@ namespace controllers {
         } catch (std::exception &e) {
             CROW_LOG_ERROR << "Error during update message: " << e.what();
             return crow::response(500, "Error during update message: " + std::string(e.what()));
+        }
+    }
+
+    crow::response get_messages_by_chat_id(const crow::request &req, const int &chat_id) {
+        auto auth_header = req.get_header_value("Authorization");
+        if (auth_header.empty()) {
+            return crow::response(401, "No Authorization header provided");
+        }
+
+        try {
+            auto get_user_id = get_user_id_from_token(auth_header);
+            std::string user_id = *get_user_id;
+
+            if (user_id.empty()) {
+                return crow::response(400, "User ID must be provided");
+            }
+
+            std::vector<UserMessage> user_messages = models::Message::get_messages_by_chat_id(chat_id);
+
+            json messages_json = json::array();
+            for (const auto &message: user_messages) {
+                messages_json.push_back(models::Message::to_json(message));
+            }
+
+            return crow::response(200, messages_json.dump());
+        } catch (json::exception &e) {
+            CROW_LOG_ERROR << "JSON parsing error: " << e.what();
+            return crow::response(400, "JSON parsing error: " + std::string(e.what()));
+        } catch (std::exception &e) {
+            CROW_LOG_ERROR << "Error during get_messages: " << e.what();
+            return crow::response(500, "Error during get_messages: " + std::string(e.what()));
         }
     }
 }

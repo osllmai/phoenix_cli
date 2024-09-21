@@ -1,11 +1,15 @@
 #include "api/include/models/message.h"
 #include "api/include/models/database.h"
+#include "api/include/utils/utils.h"
+
 #include <sqlite_modern_cpp.h>
 #include <string>
 #include <iostream>
 
 namespace models {
     void Message::create_message(const UserMessage &user_message) {
+        std::string image_paths_str = serialize_image_paths(user_message.image_paths);
+
         db << R"(INSERT INTO messages (chat_id, user_id, created_at, updated_at, content, image_paths, model, role, sequence_number)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);)"
            << user_message.chat_id
@@ -13,7 +17,7 @@ namespace models {
            << user_message.created_at
            << user_message.updated_at
            << user_message.content
-           << user_message.image_paths
+           << image_paths_str
            << user_message.model
            << user_message.role
            << user_message.sequence_number;
@@ -73,9 +77,19 @@ namespace models {
                   "FROM messages WHERE user_id = ?;"
                << user_id
                >> [&](int id, int chat_id, std::string user_id, std::string created_at, std::string updated_at,
-                      std::string content, std::vector<std::string> image_paths, std::string model, std::string role, int sequence_number) {
+                      std::string content, std::string image_paths_str, std::string model, std::string role, int sequence_number) {
                    UserMessage message{
-                           id, chat_id, user_id, created_at, updated_at, content, image_paths, model, role, sequence_number};
+                           id,
+                           chat_id,
+                           user_id,
+                           created_at,
+                           updated_at,
+                           content,
+                           deserialize_image_paths(image_paths_str), // Deserialize image_paths
+                           model,
+                           role,
+                           sequence_number
+                   };
                    result.push_back(message);
                };
 
@@ -86,8 +100,40 @@ namespace models {
         return result;
     }
 
-    void Message::to_json(json &j, const UserMessage &message) {
-        j = json{
+
+    std::vector<UserMessage> Message::get_messages_by_chat_id(const int &chat_id) {
+        std::vector<UserMessage> result;
+
+        try {
+            db << "SELECT id, chat_id, user_id, created_at, updated_at, content, image_paths, model, role, sequence_number "
+                  "FROM messages WHERE chat_id = ?;"
+               << chat_id
+               >> [&](int id, int chat_id, std::string user_id, std::string created_at, std::string updated_at,
+                      std::string content, std::string image_paths_str, std::string model, std::string role, int sequence_number) {
+                   UserMessage message{
+                           id,
+                           chat_id,
+                           user_id,
+                           created_at,
+                           updated_at,
+                           content,
+                           deserialize_image_paths(image_paths_str), // Deserialize image_paths
+                           model,
+                           role,
+                           sequence_number
+                   };
+                   result.push_back(message);
+               };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving messages: " << e.what() << std::endl;
+        }
+
+        return result;
+    }
+
+    json Message::to_json(const UserMessage &message) {
+        return json{
                 {"id",                    message.id},
                 {"chat_id",               message.chat_id},
                 {"user_id",              message.user_id},

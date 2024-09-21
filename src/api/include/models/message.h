@@ -32,6 +32,8 @@ namespace models {
 
         static std::vector<UserMessage> messages(const std::string &user_id);
 
-        static void to_json(json &j, const UserMessage &message);
+        static std::vector<UserMessage> get_messages_by_chat_id(const int &chat_id);
+
+        static json to_json(const UserMessage &message);
     };
 }
