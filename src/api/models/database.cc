@@ -233,24 +233,25 @@ namespace models {
 
             // Create chats table
             db << "CREATE TABLE IF NOT EXISTS chats ("
-                  "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                  "user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,"
-                  "workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,"
+                  "id INTEGER PRIMARY KEY,"
+                  "user_id TEXT REFERENCES users(id) ON DELETE CASCADE,"
+                  "workspace_id INTEGER REFERENCES workspaces(id) ON DELETE CASCADE,"
                   "assistant_id INTEGER REFERENCES assistants(id) ON DELETE CASCADE,"
                   "folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL,"
-                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "created_at TEXT DEFAULT CURRENT_TIMESTAMP,"
                   "updated_at TEXT,"
-                  "sharing TEXT NOT NULL DEFAULT 'private',"
-                  "context_length INT NOT NULL,"
-                  "description TEXT NOT NULL CHECK (length(description) <= 500),"
-                  "embeddings_provider TEXT NOT NULL CHECK (length(embeddings_provider) <= 1000),"
-                  "include_profile_context BOOLEAN NOT NULL,"
-                  "include_workspace_instructions BOOLEAN NOT NULL,"
-                  "model TEXT NOT NULL CHECK (length(model) <= 1000),"
-                  "name TEXT NOT NULL CHECK (length(name) <= 200),"
-                  "prompt TEXT NOT NULL CHECK (length(prompt) <= 100000),"
-                  "temperature REAL NOT NULL"
+                  "sharing TEXT DEFAULT 'private',"
+                  "context_length INT,"
+                  "description TEXT CHECK (length(description) <= 500),"
+                  "embeddings_provider TEXT CHECK (length(embeddings_provider) <= 1000),"
+                  "include_profile_context BOOLEAN,"
+                  "include_workspace_instructions BOOLEAN,"
+                  "model TEXT CHECK (length(model) <= 1000),"
+                  "name TEXT CHECK (length(name) <= 200),"
+                  "prompt TEXT CHECK (length(prompt) <= 100000),"
+                  "temperature REAL"
                   ");";
+
 
             // Create indexes for chats
             db << "CREATE INDEX IF NOT EXISTS idx_chats_user_id ON chats (user_id);";
@@ -274,15 +275,15 @@ namespace models {
             // Create messages table
             db << "CREATE TABLE IF NOT EXISTS messages ("
                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                  "chat_id INTEGER NOT NULL,"
-                  "user_id INTEGER NOT NULL,"
-                  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                  "chat_id INTEGER,"
+                  "user_id INTEGER,"
+                  "created_at TEXT DEFAULT CURRENT_TIMESTAMP,"
                   "updated_at TEXT,"
                   "content TEXT NOT NULL CHECK (length(content) <= 1000000),"
-                  "image_paths TEXT NOT NULL,"
-                  "model TEXT NOT NULL CHECK (length(model) <= 1000),"
+                  "image_paths TEXT,"
+                  "model TEXT CHECK (length(model) <= 1000),"
                   "role TEXT NOT NULL CHECK (length(role) <= 1000),"
-                  "sequence_number INTEGER NOT NULL,"
+                  "sequence_number INTEGER,"
                   "CONSTRAINT check_image_paths_length CHECK (length(image_paths) <= 16000)"
                   ");";
 
