@@ -76,6 +76,26 @@ namespace models {
         return result;
     }
 
+    std::vector<UserAssistantTool> AssistantTool::get_assistant_tools_by_assistant_id(const int &assistant_id) {
+        std::vector<UserAssistantTool> result;
+
+        try {
+            db << "SELECT user_id, assistant_id, tool_id, created_at, updated_at "
+                  "FROM assistant_tools WHERE assistant_id = ?;"
+               << assistant_id
+               >> [&](std::string user_id, int assistant_id, int tool_id, std::string created_at, std::string updated_at) {
+                   UserAssistantTool assistant_tool{
+                           user_id, assistant_id, tool_id, created_at, updated_at};
+                   result.push_back(assistant_tool);
+               };
+
+        } catch (const std::exception &e) {
+            std::cerr << "Error retrieving assistant_tools: " << e.what() << std::endl;
+        }
+
+        return result;
+    }
+
     void AssistantTool::to_json(json &j, const UserAssistantTool &assistant_tool) {
         j = json{
                 {"user_id",              assistant_tool.user_id},
