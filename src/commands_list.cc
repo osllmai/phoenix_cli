@@ -7,6 +7,7 @@
 #include "chat.h"
 #include "api/api.h"
 #include "web_server.h"
+#include "openai.h"
 
 
 #include <iostream>
@@ -14,6 +15,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <cstdlib>
 
 
 using json = nlohmann::json;
@@ -292,6 +294,44 @@ void handle_serve_command(const std::string &model_name) {
     endpoint_threads.join();
 }
 
+void handle_openai_command() {
+    try {
+        // Read the API key from the environment variable
+        const char *api_key_env = std::getenv("OPENAI_API_KEY");
+        if (!api_key_env) {
+            throw std::runtime_error("OPENAI_API_KEY environment variable not set");
+        }
+        std::string api_key = api_key_env;
+
+        OpenAI openai(api_key);
+
+        std::string prompt;
+        std::cout << "Enter a prompt: " << std::endl;
+        std::getline(std::cin, prompt);
+
+        // Prepare the messages for the chat completion
+        json messages = json::array({
+                                            {{"role", "system"}, {"content", "You are a helpful assistant."}},
+                                            {{"role", "user"},   {"content", prompt}}
+                                    });
+
+        // Define a callback function to handle the streamed response
+        auto callback = [](const std::string &content) {
+            std::cout << content << std::flush;
+            return true;  // Return true to continue processing
+        };
+
+        // Stream the chat completion
+        std::atomic<bool> connection_alive(true);
+        std::cout << "AI response:" << std::endl;
+        openai.stream_chat_completion("gpt-3.5-turbo", messages, callback, connection_alive);
+        std::cout << std::endl << "Story complete." << std::endl;
+
+    } catch (const std::exception &e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+    }
+}
+
 void show_commands(int argc, char **argv) {
     // Directory management
     DirectoryManager::handle_application_directory();
@@ -404,9 +444,23 @@ void show_commands(int argc, char **argv) {
                 return;
             }
 
+        } else if (arg == "openai") {
+            if (i + 1 < argc) {
+                if (argv[i + 1] == std::string("--help")) {
+                    std::cout << "Interact with OpenAI" << std::endl;
+                    std::cout << "Usage:" << std::endl;
+                    std::cout << "  ./phoenix openai [api_key]" << std::endl;
+                    return;
+                }
+                return;
+            }
+            handle_openai_command();
+            return;
         } else {
             std::cout << "Unknown command. Use --help for usage information."
                       << std::endl;
         }
     }
 }
+
+
