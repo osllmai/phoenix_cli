@@ -136,6 +136,7 @@ set(LIBRARY_SOURCES
         "api/routes/model_workspace.cc"
         "api/routes/assistant_tool.cc"
         "api/routes/streaming.cc"
+        "openai.cc"
 )
 
 set(LIBRARY_HEADERS
@@ -236,6 +237,7 @@ set(LIBRARY_HEADERS
         "api/include/routes/model_workspace.h"
         "api/include/routes/streaming.h"
         "api/api.h"
+        "openai.h"
 )
 
 # Include directories

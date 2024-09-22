@@ -58,6 +58,9 @@ void send_internal_server_error(std::shared_ptr<tcp::socket> socket);
 void handle_generate_request(std::shared_ptr<tcp::socket> socket, const http::request <http::dynamic_body> &req,
                              bool keep_alive);
 
+void handle_openai_request(std::shared_ptr<tcp::socket> socket, const http::request <http::dynamic_body> &req,
+                             bool keep_alive);
+
 void handle_chat_request(std::shared_ptr<tcp::socket> socket, const http::request <http::dynamic_body> &req,
                          bool keep_alive);
 

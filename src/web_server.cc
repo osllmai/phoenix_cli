@@ -3,6 +3,7 @@
 #include "directory_manager.h"
 #include "models_list.h"
 #include "download_model.h"
+#include "openai.h"
 
 #include <atomic>
 #include <boost/asio.hpp>
@@ -45,7 +46,7 @@ std::string chat_history_to_string(const std::vector<std::pair<std::string, std:
 // Function to send a streaming response
 void send_streaming_response(std::shared_ptr<tcp::socket> socket, const std::string &prompt_template,
                              const std::string &path, const std::string &prompt, bool keep_alive, int version) {
-    http::response<http::empty_body> res{http::status::ok, version};
+    http::response <http::empty_body> res{http::status::ok, version};
     res.set(http::field::server, "Beast");
     res.set(http::field::access_control_allow_origin, "*");
     res.set(http::field::access_control_allow_headers, "content-type");
@@ -102,7 +103,7 @@ void send_non_streaming_response(std::shared_ptr<tcp::socket> socket, const std:
     boost::property_tree::write_json(json_response_stream, response_pt);
     std::string json_response = json_response_stream.str();
 
-    http::response<http::string_body> res{http::status::ok, version};
+    http::response <http::string_body> res{http::status::ok, version};
     res.set(http::field::server, "Beast");
     res.set(http::field::access_control_allow_origin, "*");
     res.set(http::field::access_control_allow_headers, "content-type");
@@ -117,7 +118,7 @@ void send_non_streaming_response(std::shared_ptr<tcp::socket> socket, const std:
 
 // Function to send a bad request response
 void send_bad_request(std::shared_ptr<tcp::socket> socket, bool keep_alive, int version) {
-    http::response<http::string_body> res{http::status::bad_request, version};
+    http::response <http::string_body> res{http::status::bad_request, version};
     res.set(http::field::server, "Beast");
     res.set(http::field::content_type, "application/json");
     res.body() = R"({"error": "Invalid request"})";
@@ -129,7 +130,7 @@ void send_bad_request(std::shared_ptr<tcp::socket> socket, bool keep_alive, int 
 
 // Function to send an internal server error response
 void send_internal_server_error(std::shared_ptr<tcp::socket> socket) {
-    http::response<http::string_body> res{http::status::internal_server_error, 11};
+    http::response <http::string_body> res{http::status::internal_server_error, 11};
     res.set(http::field::server, "Beast");
     res.set(http::field::content_type, "application/json");
     res.body() = R"({"error": "Internal server error"})";
@@ -139,7 +140,7 @@ void send_internal_server_error(std::shared_ptr<tcp::socket> socket) {
 }
 
 // Function to handle /api/generate requests
-void handle_generate_request(std::shared_ptr<tcp::socket> socket, const http::request<http::dynamic_body> &req,
+void handle_generate_request(std::shared_ptr<tcp::socket> socket, const http::request <http::dynamic_body> &req,
                              bool keep_alive) {
     std::string body = beast::buffers_to_string(req.body().data());
     std::istringstream json_stream(body);
@@ -172,7 +173,7 @@ void handle_generate_request(std::shared_ptr<tcp::socket> socket, const http::re
 }
 
 // Function to handle /api/chat requests
-void handle_chat_request(std::shared_ptr<tcp::socket> socket, const http::request<http::dynamic_body> &req,
+void handle_chat_request(std::shared_ptr<tcp::socket> socket, const http::request <http::dynamic_body> &req,
                          bool keep_alive) {
     std::string body = beast::buffers_to_string(req.body().data());
     std::istringstream json_stream(body);
@@ -210,18 +211,202 @@ void handle_chat_request(std::shared_ptr<tcp::socket> socket, const http::reques
     }
 }
 
+//void handle_openai_request(std::shared_ptr<tcp::socket> socket, const http::request <http::dynamic_body> &req,
+//                           bool keep_alive) {
+//    try {
+//        // Extract request body as a string
+//        std::string body = beast::buffers_to_string(req.body().data());
+//
+//        // Parse the JSON request body
+//        std::istringstream json_stream(body);
+//        boost::property_tree::ptree pt;
+//        boost::property_tree::read_json(json_stream, pt);
+//
+//        // Extract parameters from JSON
+//        std::string model_name = "gpt-3.5-turbo";
+//        std::string prompt = pt.get<std::string>("prompt");
+//        bool stream = pt.get<bool>("stream", true);  // Default to true for streaming
+//
+//        // Initialize OpenAI API with your key
+//        OpenAI openai("your_openai_api_key");
+//
+//        // Set up HTTP response headers
+//        http::response <http::empty_body> res{http::status::ok, req.version()};
+//        res.set(http::field::server, "Beast");
+//        res.set(http::field::access_control_allow_origin, "*");
+//        res.set(http::field::access_control_allow_headers, "content-type");
+//        res.set(http::field::access_control_allow_methods, "POST");
+//        res.set(http::field::content_type, "application/json");
+//        res.set(http::field::transfer_encoding, "chunked");
+//        res.keep_alive(keep_alive);
+//
+//        // Send response headers
+//        http::serializer<false, http::empty_body> sr{res};
+//        http::write_header(*socket, sr);
+//
+//        // Lambda function to send data chunks
+//        auto send_chunk = [socket](const std::string &data) {
+//            std::stringstream ss;
+//            ss << std::hex << data.size() << "\r\n" << data << "\r\n";
+//            std::string formatted_chunk = ss.str();
+//
+//            boost::system::error_code ec;
+//            boost::asio::write(*socket, boost::asio::buffer(formatted_chunk), ec);
+//            if (ec) {
+//                std::cerr << "Error sending chunk: " << ec.message() << std::endl;
+//                return false;
+//            }
+//            return true;
+//        };
+//
+//        // Lambda to handle the response from OpenAI
+//        auto openai_callback = [&](const std::string &content) {
+//            std::string json_chunk = "{\"chunk\": \"" + content + "\"}";
+//            if (!send_chunk(json_chunk)) {
+//                std::cerr << "Failed to send OpenAI chunk." << std::endl;
+//            }
+//        };
+//
+//        // JSON structure for OpenAI request
+//        json messages = json::array({{
+//                                             {"role", "user"},
+//                                             {"content", prompt}
+//                                     }});
+//
+//        // Call the OpenAI streaming function
+//        openai.stream_chat_completion(model_name, messages, openai_callback);
+//
+//        // Send terminating chunk
+//        send_chunk("[DONE]");
+//        boost::asio::write(*socket, boost::asio::buffer("0\r\n\r\n"));  // End chunked transfer encoding
+//
+//    } catch (const std::exception &e) {
+//        // Error handling: log and respond with an internal server error
+//        std::cerr << "Error processing OpenAI request: " << e.what() << std::endl;
+//        send_internal_server_error(socket);  // Your existing function for 500 responses
+//    }
+//}
+
+void handle_openai_chat_request(std::shared_ptr<tcp::socket> socket, const http::request<http::dynamic_body>& req, bool keep_alive) {
+    try {
+        // Parse the request body
+        std::string body = beast::buffers_to_string(req.body().data());
+        std::istringstream json_stream(body);
+        boost::property_tree::ptree pt;
+        boost::property_tree::read_json(json_stream, pt);
+
+        std::string model = pt.get<std::string>("model");
+        std::string prompt = pt.get<std::string>("prompt");
+        std::string api_key = pt.get<std::string>("api_key");
+
+        std::cout << "Received request for model: " << model << " with prompt: " << prompt << std::endl;
+
+        OpenAI openai(api_key);
+
+        // Prepare the HTTP response headers
+        http::response<http::empty_body> res{http::status::ok, req.version()};
+        res.set(http::field::server, "Beast");
+        res.set(http::field::content_type, "text/event-stream");
+        res.set(http::field::access_control_allow_origin, "*");
+        res.set(http::field::cache_control, "no-cache");
+        res.set(http::field::connection, keep_alive ? "keep-alive" : "close");
+        res.set(http::field::transfer_encoding, "chunked");
+        res.keep_alive(keep_alive);
+
+        // Create a serializer
+        http::response_serializer<http::empty_body> sr{res};
+
+        // Send the response headers
+        boost::system::error_code ec;
+        http::write_header(*socket, sr, ec);
+        if (ec) {
+            std::cerr << "Error sending headers: " << ec.message() << std::endl;
+            return;
+        }
+
+        std::atomic<bool> connection_alive{true};
+
+        // Function to send a chunk
+        auto send_chunk = [socket, &connection_alive](const std::string& data) {
+            if (!connection_alive) return false;
+
+            // Format the chunk
+            std::ostringstream oss;
+            oss << std::hex << data.size() << "\r\n" << data << "\r\n";
+            std::string chunk = oss.str();
+
+            boost::system::error_code ec;
+            boost::asio::write(*socket, boost::asio::buffer(chunk), ec);
+            if (ec) {
+                std::cerr << "Error sending chunk: " << ec.message() << std::endl;
+                connection_alive = false;
+                return false;
+            }
+            return true;
+        };
+
+        // Token callback function
+        auto token_callback = [&send_chunk](const std::string& token) -> bool {
+            std::cout << "Received token: " << token << std::endl;
+            std::string json_chunk = "data: " + json({{"chunk", token}}).dump() + "\n\n";
+            bool sent = send_chunk(json_chunk);
+            std::cout << "Sent chunk: " << (sent ? "success" : "failure") << std::endl;
+            return sent;
+        };
+
+        // Build the messages for the OpenAI API
+        json messages = json::array({
+                                            {{"role", "system"}, {"content", "You are a helpful assistant."}},
+                                            {{"role", "user"},   {"content", prompt}}
+                                    });
+
+        std::cout << "Sending request to OpenAI API..." << std::endl;
+
+        // Call the OpenAI streaming function
+        openai.stream_chat_completion(model, messages, token_callback, connection_alive);
+
+        std::cout << "Finished streaming response from OpenAI API." << std::endl;
+
+        if (connection_alive) {
+            // Send the final data chunk
+            send_chunk("data: [DONE]\n\n");
+
+            // Send the terminating chunk
+            boost::asio::write(*socket, boost::asio::buffer("0\r\n\r\n"), ec);
+            if (ec) {
+                std::cerr << "Error sending terminating chunk: " << ec.message() << std::endl;
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error in handle_openai_chat_request: " << e.what() << std::endl;
+        // Send an error response to the client if possible
+        try {
+            http::response<http::string_body> res{http::status::internal_server_error, req.version()};
+            res.set(http::field::server, "Beast");
+            res.set(http::field::content_type, "application/json");
+            res.keep_alive(keep_alive);
+            res.body() = json({{"error", e.what()}}).dump();
+            res.prepare_payload();
+            http::write(*socket, res);
+        } catch (...) {
+            std::cerr << "Failed to send error response to client" << std::endl;
+        }
+    }
+}
+
+
 // Function to handle HTTP requests
 void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buffer) {
     try {
         // Read the request
-        http::request<http::dynamic_body> req;
+        http::request <http::dynamic_body> req;
         http::read(*socket, buffer, req);
 
         // Set Keep-Alive
         bool keep_alive = req.keep_alive();
 
         if (req.method() == http::verb::options) {
-            http::response<http::empty_body> res{http::status::no_content, req.version()};
+            http::response <http::empty_body> res{http::status::no_content, req.version()};
             res.set(http::field::server, "Beast");
             res.set(http::field::access_control_allow_origin, "*");
             res.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS");
@@ -236,6 +421,8 @@ void handle_request(std::shared_ptr<tcp::socket> socket, beast::flat_buffer buff
             handle_generate_request(socket, req, keep_alive);
         } else if (req.method() == http::verb::post && req.target() == "/api/chat") {
             handle_chat_request(socket, req, keep_alive);
+        } else if (req.method() == http::verb::post && req.target() == "/api/openai") {
+            handle_openai_chat_request(socket, req, keep_alive);
         } else {
             send_bad_request(socket, keep_alive, req.version());
         }
