@@ -449,8 +449,8 @@ void show_commands(int argc, char **argv) {
                 if (argv[i + 1] == std::string("--help")) {
                     std::cout << "Interact with OpenAI" << std::endl;
                     std::cout << "Usage:" << std::endl;
-                    std::cout << "Add your OpenAI token to environment variables" << std::endl;
-                    std::cout << "export OPENAI_API_KEY=[token]" << std::endl;
+                    std::cout << "  Add your OpenAI token to environment variables" << std::endl;
+                    std::cout << "  export OPENAI_API_KEY=[token]" << std::endl;
                     std::cout << "  ./phoenix openai [model] - default: gpt-4o-mini" << std::endl;
                     return;
                 }
