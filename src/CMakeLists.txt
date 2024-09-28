@@ -34,6 +34,7 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 find_package(CURL REQUIRED)
 # Link SQLite3
 find_package(SQLite3 REQUIRED)
+# Find Boost package
 find_package(Boost 1.85 REQUIRED COMPONENTS system filesystem)
 # Link pthread (required by Crow)
 find_package(Threads REQUIRED)
@@ -292,6 +293,11 @@ elseif (UNIX)
             llmodel
             Boost::system
             Boost::filesystem
+            Crow::Crow
+            jwt-cpp
+            OpenSSL::SSL
+            OpenSSL::Crypto
+            Threads::Threads
     )
 elseif (WIN32)
     find_package(Kompute QUIET)
@@ -310,9 +316,15 @@ elseif (WIN32)
                 llamamodel-mainline-kompute-avxonly
                 ${CUDA_LIBRARIES}
                 ${CURL_LIBRARY}
+                SQLite::SQLite3
                 Boost::system
                 Boost::filesystem
                 ${SQLite3_LIBRARY}
+                Crow::Crow
+                jwt-cpp
+                OpenSSL::SSL
+                OpenSSL::Crypto
+                Threads::Threads
         )
     else ()
         target_link_libraries(${LIBRARY_NAME} PUBLIC
@@ -331,6 +343,12 @@ elseif (WIN32)
                 Boost::system
                 Boost::filesystem
                 ${SQLite3_LIBRARY}
+                SQLite::SQLite3
+                Crow::Crow
+                jwt-cpp
+                OpenSSL::SSL
+                OpenSSL::Crypto
+                Threads::Threads
         )
     endif ()
 
