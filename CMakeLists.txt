@@ -75,6 +75,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
+# Find Qt6
+find_package(Qt6 COMPONENTS Widgets REQUIRED)
+
+# Enable automatic processing of Qt-specific files
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+
 # macOS specific configurations
 if(APPLE)
     option(OLD_MACOS "Using old macOS" OFF)
