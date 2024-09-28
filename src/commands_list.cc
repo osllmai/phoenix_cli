@@ -294,7 +294,7 @@ void handle_serve_command(const std::string &model_name) {
     endpoint_threads.join();
 }
 
-void handle_openai_command() {
+void handle_openai_command(const std::string &model) {
     try {
         // Read the API key from the environment variable
         const char *api_key_env = std::getenv("OPENAI_API_KEY");
@@ -324,7 +324,7 @@ void handle_openai_command() {
         // Stream the chat completion
         std::atomic<bool> connection_alive(true);
         std::cout << "AI response:" << std::endl;
-        openai.stream_chat_completion("gpt-3.5-turbo", messages, callback, connection_alive);
+        openai.stream_chat_completion(model, messages, callback, connection_alive);
         std::cout << std::endl << "Story complete." << std::endl;
 
     } catch (const std::exception &e) {
@@ -449,12 +449,16 @@ void show_commands(int argc, char **argv) {
                 if (argv[i + 1] == std::string("--help")) {
                     std::cout << "Interact with OpenAI" << std::endl;
                     std::cout << "Usage:" << std::endl;
-                    std::cout << "  ./phoenix openai [api_key]" << std::endl;
+                    std::cout << "Add your OpenAI token to environment variables" << std::endl;
+                    std::cout << "export OPENAI_API_KEY=[token]" << std::endl;
+                    std::cout << "  ./phoenix openai [model] - default: gpt-4o-mini" << std::endl;
                     return;
                 }
+                std::string model = argv[i + 1];
+                if (model.empty()) model = "gpt-4o-mini";
+                handle_openai_command(model);
                 return;
             }
-            handle_openai_command();
             return;
         } else {
             std::cout << "Unknown command. Use --help for usage information."
