@@ -76,7 +76,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nlohmann_json)
 
 # Find Qt6
-find_package(Qt6 COMPONENTS Widgets REQUIRED)
+find_package(Qt6 COMPONENTS Widgets Network REQUIRED)
 
 # Enable automatic processing of Qt-specific files
 set(CMAKE_AUTOMOC ON)
@@ -209,7 +209,7 @@ if(APPLE)
     set(CPACK_DMG_BACKGROUND_IMAGE "${PROJECT_SOURCE_DIR}/resources/background.png")
     set(CPACK_DMG_ICON "${PROJECT_SOURCE_DIR}/resources/icon.icns")
     set(MACOSX_BUNDLE_EXECUTABLE_NAME ${EXECUTABLE_NAME})
-    set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.yourcompany.phoenix")
+    set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.osllm.phoenix")
     set(MACOSX_BUNDLE_BUNDLE_NAME ${PROJECT_NAME})
     set(MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION})
     set(MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
