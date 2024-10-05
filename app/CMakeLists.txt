@@ -20,6 +20,7 @@ target_link_libraries(${EXECUTABLE_NAME} PUBLIC
         Qt6::Widgets
         Qt6::Core
         Qt6::Gui
+        Qt6::Network
 )
 
 # Ensure CMake processes Qt resources
