@@ -150,15 +150,15 @@ Before you begin, ensure that the following dependencies are installed:
 After building the project, you can run the executable from the build directory:
 
 ```bash
-./bin/phoenix_cli help
+./build/bin/phoenix_cli --help
 PhoenixCLI is a large language model runner developed by osllm.ai. It is open-source software that you can use freely to run and manage large language models.
 
 Usage:
-phoenix [flags]
-phoenix [command]
+phoenix_cli [flags]
+phoenix_cli [command]
 
 Available Commands:
-  serve		Start the phoenix server
+  serve		Start the phoenix_cli server
   list		Displays a list of all available models that you can run or manage
   show		Show full information about a model
   run		Executes a model based on your specified input
@@ -167,12 +167,13 @@ Available Commands:
   rm		Remove a model from your local storage
   history	Shows a list of your previous chats
   help		Provides detailed information and guidance about any specific command
+  openai	Interact with OpenAI models
 
 Flags:
-  -h, --help	Displays help information for the phoenix command
+  -h, --help	Displays help information for the phoenix_cli command
   -v, --version	Outputs the current version of PhoenixCLI
 
-Use "phoenix [command] --help" for more information about a command.
+Use "phoenix_cli [command] --help" for more information about a command.
 ```
 
 ## UI Setup
