@@ -1,24 +1,24 @@
-// TrayIconManager.h
-#pragma once
+#ifndef TRAY_ICON_MANAGER_H
+#define TRAY_ICON_MANAGER_H
 
 #include <QObject>
 #include <QSystemTrayIcon>
 #include <QMenu>
 #include <QAction>
-#include <QIcon>
 
 class TrayIconManager : public QObject {
-    Q_OBJECT
+Q_OBJECT
 
 public:
-    explicit TrayIconManager(QObject *parent = nullptr);
-    ~TrayIconManager();
-
-private slots:
-            void onExit();
+    TrayIconManager(QObject *parent = nullptr);
+    void showMessage(const QString &title, const QString &message);
 
 private:
-    QSystemTrayIcon *trayIcon;
+    QSystemTrayIcon trayIcon;
     QMenu *trayMenu;
     QAction *exitAction;
+
+    void setupTrayIcon();
 };
+
+#endif // TRAY_ICON_MANAGER_H
