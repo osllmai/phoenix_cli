@@ -1,45 +1,29 @@
 #include "tray_icon_manager.h"
-
+#include <QIcon>
 #include <QApplication>
-#include <QDebug>
 
-TrayIconManager::TrayIconManager(QObject *parent) : QObject(parent) {
-    // Initialize tray icon
-    trayIcon = new QSystemTrayIcon(this);
-    QIcon icon(":/icon.png"); // Ensure this path is correct
-    if (icon.isNull()) {
-        qDebug() << "Failed to load tray icon!";
-    }
-    trayIcon->setIcon(icon);
-    trayIcon->setVisible(true);
-    trayIcon->setToolTip("Phoenix Application");
+TrayIconManager::TrayIconManager(QObject *parent) : QObject(parent), trayIcon(this) {
+    setupTrayIcon();
+}
 
-    // Initialize tray menu
+void TrayIconManager::setupTrayIcon() {
     trayMenu = new QMenu();
 
-    // Exit action
-    exitAction = new QAction("Exit", trayMenu);
-    connect(exitAction, &QAction::triggered, this, &TrayIconManager::onExit);
+    // Example actions
+    QAction *showCommandsAction = new QAction("Show Commands", this);
+    // Connect to appropriate slots or lambdas if needed
+    trayMenu->addAction(showCommandsAction);
+
+    exitAction = new QAction("Exit", this);
+    connect(exitAction, &QAction::triggered, qApp, &QApplication::quit);
     trayMenu->addAction(exitAction);
 
-    // Set context menu
-    trayIcon->setContextMenu(trayMenu);
-
-    // Optional: Connect activation signal (e.g., double-click)
-    connect(trayIcon, &QSystemTrayIcon::activated, this, [&](QSystemTrayIcon::ActivationReason reason) {
-        if (reason == QSystemTrayIcon::Trigger) { // Single click
-            // Implement if needed
-        } else if (reason == QSystemTrayIcon::DoubleClick) { // Double click
-            // Implement if needed
-        }
-    });
+    trayIcon.setContextMenu(trayMenu);
+    trayIcon.setIcon(QIcon(":/icon.png")); // Ensure you have an icon resource
+    trayIcon.setToolTip("Phoenix CLI");
+    trayIcon.show();
 }
 
-TrayIconManager::~TrayIconManager() {
-    delete trayMenu;
-    // trayIcon is deleted automatically as its parent is `this`
-}
-
-void TrayIconManager::onExit() {
-    QApplication::quit();
+void TrayIconManager::showMessage(const QString &title, const QString &message) {
+    trayIcon.showMessage(title, message, QSystemTrayIcon::Information, 3000);
 }

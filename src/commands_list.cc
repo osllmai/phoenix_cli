@@ -28,11 +28,11 @@ void print_help() {
               << std::endl;
     std::cout << std::endl;
     std::cout << "Usage:" << std::endl;
-    std::cout << "phoenix [flags]" << std::endl;
-    std::cout << "phoenix [command]" << std::endl;
+    std::cout << "phoenix_cli [flags]" << std::endl;
+    std::cout << "phoenix_cli [command]" << std::endl;
     std::cout << std::endl;
     std::cout << "Available Commands:" << std::endl;
-    std::cout << "  serve\t\tStart the phoenix server" << std::endl;
+    std::cout << "  serve\t\tStart the phoenix_cli server" << std::endl;
     std::cout << "  list\t\tDisplays a list of all available models that you can "
                  "run or manage"
               << std::endl;
@@ -49,17 +49,19 @@ void print_help() {
     std::cout << "  help\t\tProvides detailed information and guidance about any "
                  "specific command"
               << std::endl;
+    std::cout << "  openai\tInteract with OpenAI models" << std::endl;
     std::cout << std::endl;
     std::cout << "Flags:" << std::endl;
-    std::cout << "  -h, --help\tDisplays help information for the phoenix command"
+    std::cout << "  -h, --help\tDisplays help information for the phoenix_cli command"
               << std::endl;
     std::cout << "  -v, --version\tOutputs the current version of PhoenixCLI"
               << std::endl;
     std::cout << std::endl;
-    std::cout << "Use \"phoenix [command] --help\" for more information about a "
+    std::cout << "Use \"phoenix_cli [command] --help\" for more information about a "
                  "command."
               << std::endl;
 }
+
 
 void handle_run_command(const std::string &model_name) {
     sqlite3 *db;
@@ -286,15 +288,26 @@ void handle_show_command(const std::string &model_name) {
 }
 
 void handle_serve_command(const std::string &model_name) {
-    std::thread serv_thread(handle_server);
-    std::thread run_model_thread(handle_run_command, model_name);
-    std::thread endpoint_threads(endpoints);
-    serv_thread.join();
-    run_model_thread.join();
-    endpoint_threads.join();
+    try {
+        std::thread serv_thread(handle_server);
+        std::thread run_model_thread(handle_run_command, model_name);
+        std::thread endpoint_threads(endpoints);
+
+        // Join the threads to prevent the main process from exiting
+        serv_thread.join();
+        run_model_thread.join();
+        endpoint_threads.join();
+    } catch (const std::exception &e) {
+        std::cerr << "Error starting serve command: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "Unknown error starting serve command." << std::endl;
+    }
 }
 
-void handle_openai_command() {
+
+
+
+void handle_openai_command(const std::string &model) {
     try {
         // Read the API key from the environment variable
         const char *api_key_env = std::getenv("OPENAI_API_KEY");
@@ -305,9 +318,16 @@ void handle_openai_command() {
 
         OpenAI openai(api_key);
 
+        // Clear any leftover input
+//        std::cin.gnumeric_limits<std::streamsize>::max(), '\n');
+
         std::string prompt;
         std::cout << "Enter a prompt: " << std::endl;
         std::getline(std::cin, prompt);
+
+        if (prompt.empty()) {
+            throw std::runtime_error("Prompt cannot be empty");
+        }
 
         // Prepare the messages for the chat completion
         json messages = json::array({
@@ -324,8 +344,7 @@ void handle_openai_command() {
         // Stream the chat completion
         std::atomic<bool> connection_alive(true);
         std::cout << "AI response:" << std::endl;
-        openai.stream_chat_completion("gpt-3.5-turbo", messages, callback, connection_alive);
-        std::cout << std::endl << "Story complete." << std::endl;
+        openai.stream_chat_completion(model, messages, callback, connection_alive);
 
     } catch (const std::exception &e) {
         std::cerr << "Error: " << e.what() << std::endl;
@@ -385,7 +404,7 @@ void show_commands(int argc, char **argv) {
                     std::cout << "Show full information about model" << std::endl;
                     std::cout << std::endl;
                     std::cout << "Usage: " << std::endl;
-                    std::cout << "  ./phoenix show MODEL_NAME" << std::endl;
+                    std::cout << "  ./phoenix_cli show MODEL_NAME" << std::endl;
                     return;
                 }
                 handle_show_command(argv[i + 1]);
@@ -397,11 +416,15 @@ void show_commands(int argc, char **argv) {
                     std::cout << "Run llm on your local machine" << std::endl;
                     std::cout << std::endl;
                     std::cout << "Usage: " << std::endl;
-                    std::cout << "  ./phoenix exec /path/to/model.gguf" << std::endl;
+                    std::cout << "  ./phoenix_cli exec /path/to/model.gguf" << std::endl;
                     return;
                 }
 
                 handle_exec_command(argv[i + 1]);
+                return;
+            } else {
+                std::cout << "Error: 'exec' command requires a model path argument" << std::endl;
+                return;
             }
         } else if (arg == "history") {
             if (i + 1 < argc) {
@@ -409,10 +432,10 @@ void show_commands(int argc, char **argv) {
                     std::cout << "All chat conversations generated in your home"
                               << std::endl;
                     std::cout << "Usage:" << std::endl;
-                    std::cout << "  ./phoenix history" << std::endl;
+                    std::cout << "  ./phoenix_cli history" << std::endl;
                     std::cout << std::endl;
                     std::cout << "To open history enter chat ID. e.g:" << std::endl;
-                    std::cout << "  ./phoenix history [ID]" << std::endl;
+                    std::cout << "  ./phoenix_cli history [ID]" << std::endl;
                     return;
                 }
                 handle_history_command(argv[i + 1]);
@@ -426,7 +449,7 @@ void show_commands(int argc, char **argv) {
                 if (argv[i + 1] == std::string("--help")) {
                     std::cout << "Remove a model downloaded" << std::endl;
                     std::cout << "Usage:" << std::endl;
-                    std::cout << "  ./phoenix rm [model_name]" << std::endl;
+                    std::cout << "  ./phoenix_cli rm [model_name]" << std::endl;
                     return;
                 }
                 handle_rm_command(argv[i + 1]);
@@ -437,7 +460,7 @@ void show_commands(int argc, char **argv) {
                 if (argv[i + 1] == std::string("--help")) {
                     std::cout << "Run local server to interact with llm" << std::endl;
                     std::cout << "Usage:" << std::endl;
-                    std::cout << "  ./phoenix serve [model_name]" << std::endl;
+                    std::cout << "  ./phoenix_cli serve [model_name]" << std::endl;
                     return;
                 }
                 handle_serve_command(argv[i + 1]);
@@ -445,16 +468,24 @@ void show_commands(int argc, char **argv) {
             }
 
         } else if (arg == "openai") {
-            if (i + 1 < argc) {
-                if (argv[i + 1] == std::string("--help")) {
-                    std::cout << "Interact with OpenAI" << std::endl;
-                    std::cout << "Usage:" << std::endl;
-                    std::cout << "  ./phoenix openai [api_key]" << std::endl;
-                    return;
-                }
+            if (i + 1 < argc && std::string(argv[i + 1]) == "--help") {
+                std::cout << "Interact with OpenAI" << std::endl;
+                std::cout << "Usage:" << std::endl;
+                std::cout << "  Add your OpenAI token to environment variables" << std::endl;
+                std::cout << "  export OPENAI_API_KEY=[token]" << std::endl;
+                std::cout << "  ./phoenix_cli openai [model] - default: gpt-4o-mini" << std::endl;
                 return;
             }
-            handle_openai_command();
+
+            std::string model = "gpt-4o-mini";  // Default model
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                model = argv[i + 1];  // Set model if valid argument is provided
+            }
+
+            handle_openai_command(model);
+            return;
+        } else if (arg == "start") {
+            std::cout << "Start PhoenixCLI" << std::endl;
             return;
         } else {
             std::cout << "Unknown command. Use --help for usage information."
@@ -462,5 +493,4 @@ void show_commands(int argc, char **argv) {
         }
     }
 }
-
 
