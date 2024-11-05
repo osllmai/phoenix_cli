@@ -285,6 +285,14 @@ if (APPLE)
             OpenSSL::Crypto
             Threads::Threads
     )
+
+    set(MODEL_IMPL_TARGETS
+            llmodel
+            llamamodel-mainline-cpu
+            llamamodel-mainline-cpu-avxonly
+            llamamodel-mainline-metal
+    )
+
 elseif (UNIX)
     target_link_libraries(${LIBRARY_NAME} PUBLIC
             nlohmann_json::nlohmann_json
@@ -314,6 +322,17 @@ elseif (WIN32)
                 llamamodel-mainline-cuda
                 llama-mainline-cuda-avxonly
                 llamamodel-mainline-kompute-avxonly
+#                set model impl
+                set( MODEL_IMPL_TARGETS
+                llmodel
+                llama-mainline-kompute
+                llama-mainline-kompute-avxonly
+                llamamodel-mainline-kompute
+                llamamodel-mainline-kompute-avxonly
+                llama-mainline-cuda
+                llamamodel-mainline-cuda
+                llama-mainline-cuda-avxonly
+                llamamodel-mainline-kompute-avxonly)
                 ${CUDA_LIBRARIES}
                 ${CURL_LIBRARY}
                 SQLite::SQLite3

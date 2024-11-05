@@ -10,6 +10,12 @@
 #include "database_manager.h"
 #include "directory_manager.h"
 #include "tray_icon_manager.h"
+#include <QtDBus/QtDBus>
+
+void forceLinkingQtDBus() {
+    // Use any class or function from QtDBus to ensure it's linked
+    QDBusConnection connection = QDBusConnection::sessionBus();
+}
 
 class CommandWorker : public QObject {
 Q_OBJECT
