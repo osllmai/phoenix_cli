@@ -30,41 +30,30 @@ jobs:
           hdiutil attach qtifw.dmg
 
           # Create QtIFW directory
-          sudo mkdir -p "/opt/QtIFW"
-          
-          # Copy the entire Contents directory
-          sudo cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app/Contents" "/opt/QtIFW/"
-          
-          # Set proper permissions
-          sudo chmod -R 755 "/opt/QtIFW"
-          
+          mkdir -p $HOME/QtIFW
+
+          # Copy Qt Installer Framework files
+          cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app" "$HOME/QtIFW/"
+
           # Unmount the DMG
           hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
 
-          # Create symlink to binarycreator
-          sudo ln -s "/opt/QtIFW/Contents/MacOS/binarycreator" "/usr/local/bin/binarycreator"
-
           # Set environment variables
-          echo "QTIFW_ROOT=/opt/QtIFW/Contents" >> $GITHUB_ENV
-          echo "PATH=/opt/QtIFW/Contents/MacOS:$PATH" >> $GITHUB_ENV
+          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents"
+          echo "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
           echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
+          echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
 
       - name: Verify Installation
+        shell: bash
         run: |
           echo "Current PATH: $PATH"
-          echo "QTIFW_ROOT: $QTIFW_ROOT"
+          echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
           echo "Checking QtIFW installation:"
-          ls -la "/opt/QtIFW/Contents/MacOS"
-          echo "Testing binarycreator:"
-          which binarycreator
-          binarycreator --version || echo "binarycreator version check failed"
-          
-          # Print all relevant directories
-          echo "Contents of /opt/QtIFW:"
-          ls -R /opt/QtIFW
-          
-          echo "Contents of /usr/local/bin:"
-          ls -la /usr/local/bin/binary*
+          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS"
+          echo "Checking binarycreator:"
+          find "$HOME/QtIFW" -name "binarycreator"
+          which binarycreator || echo "binarycreator not found in PATH"
 
       - name: Create Build Directory
         run: mkdir build
@@ -76,14 +65,13 @@ jobs:
         run: |
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
-                  -DCPACK_IFW_ROOT="/opt/QtIFW/Contents" \
-                  -DCPACK_GENERATOR="IFW" \
-                  -DCMAKE_VERBOSE_MAKEFILE=ON
+                  -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
+                  -DCPACK_GENERATOR="IFW"
 
       - name: Build with Make
         run: |
           cd build
-          make -j$(sysctl -n hw.ncpu) VERBOSE=1
+          make -j$(sysctl -n hw.ncpu)
 
       - name: Upload package artifacts
         if: success()
