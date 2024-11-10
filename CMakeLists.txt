@@ -104,6 +104,8 @@ FetchContent_Declare(
         llama_cpp
         GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
         GIT_TAG        b4038
+        GIT_SHALLOW TRUE
+        GIT_SUBMODULES_RECURSE TRUE
 )
 FetchContent_MakeAvailable(llama_cpp)
 
