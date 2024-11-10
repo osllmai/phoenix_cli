@@ -21,8 +21,26 @@ jobs:
           # Update Homebrew and install required packages
           brew update
           brew install curl sqlite3 boost openssl cmake qt@6
-          brew tap jmuelbert/qtifw
-          brew install qtifw
+
+          # Download Qt Installer Framework DMG
+          QTIFW_VERSION=4.8.1
+          curl -Lo qtifw.dmg https://download.qt.io/official_releases/qt-installer-framework/${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.dmg
+
+          # Mount the DMG
+          hdiutil attach qtifw.dmg
+
+          # Create QtIFW directory
+          mkdir -p $HOME/QtIFW
+
+          # Copy Qt Installer Framework files
+          cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app" "$HOME/QtIFW/"
+
+          # Unmount the DMG
+          hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
+
+          # Set environment variables
+          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents"
+          echo "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
           echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
           echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
 
@@ -32,11 +50,10 @@ jobs:
           echo "Current PATH: $PATH"
           echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
           echo "Checking QtIFW installation:"
-          ls -la "$HOME/QtIFW/bin"
+          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS"
           echo "Checking binarycreator:"
           find "$HOME/QtIFW" -name "binarycreator"
           which binarycreator || echo "binarycreator not found in PATH"
-          which cpack || echo "cpack not found in PATH"
 
       - name: Create Build Directory
         run: mkdir build
@@ -48,24 +65,17 @@ jobs:
         run: |
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
-                   -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
-                   -DCPACK_GENERATOR="IFW"
+                  -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
+                  -DCPACK_GENERATOR="IFW"
 
       - name: Build with Make
         run: |
           cd build
           make -j$(sysctl -n hw.ncpu)
 
-      - name: Package with CPack
-        run: |
-          cd build
-          cpack
-
       - name: Upload package artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: packaged-artifacts
-          path: |
-            build/*.dmg
-            build/bin/phoenix.app
+          path: build/bin/phoenix.app
