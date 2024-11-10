@@ -367,11 +367,12 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
     # Set CPACK_IFW_ROOT from environment variable if not already set
     if (NOT DEFINED CPACK_IFW_ROOT)
         if (DEFINED ENV{CPACK_IFW_ROOT})
-            set(CPACK_IFW_ROOT "$ENV{CPACK_IFW_ROOT}" CACHE PATH "Path to QtIFW" FORCE)
+            set(CPACK_IFW_ROOT "$ENV{CPACK_IFW_ROOT}" CACHE PATH "Path to Qt Installer Framework")
         else ()
             message(FATAL_ERROR "CPACK_IFW_ROOT is not set. Please set CPACK_IFW_ROOT to the path of the Qt Installer Framework.")
         endif ()
     endif ()
+
 
     # Enable verbose output
     set(CPACK_VERBOSE ON)

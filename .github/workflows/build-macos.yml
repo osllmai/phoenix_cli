@@ -20,28 +20,41 @@ jobs:
         run: |
           # Update Homebrew and install required packages
           brew update
-          brew install curl sqlite3 boost openssl cmake qt@6 qt-installer-framework
+          brew install curl sqlite3 boost openssl cmake qt@6
 
-          # Set environment variables
+          # Download Qt Installer Framework DMG
+          QTIFW_VERSION=4.8.1
+          curl -Lo qtifw.dmg https://download.qt.io/official_releases/qt-installer-framework/${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.dmg
+
+          # Mount the DMG
+          hdiutil attach qtifw.dmg -mountpoint /Volumes/qtifw
+
+          # Copy the Qt Installer Framework files
+          cp -R /Volumes/qtifw/QtInstallerFramework.app $HOME/QtIFW.app
+
+          # Unmount the DMG
+          hdiutil detach /Volumes/qtifw
+
+          # Set CPACK_IFW_ROOT to the Contents directory of the app
+          export CPACK_IFW_ROOT="$HOME/QtIFW.app/Contents"
+
+          # Add the directory containing binarycreator to PATH
+          echo "${CPACK_IFW_ROOT}/Resources" >> $GITHUB_PATH
+
+          # Export environment variables
           echo "Qt6_DIR=$(brew --prefix qt@6)/lib/cmake/Qt6" >> $GITHUB_ENV
-
-          # Get the installation prefix of qt-installer-framework
-          CPACK_IFW_ROOT=$(brew --prefix qt-installer-framework)
           echo "CPACK_IFW_ROOT=${CPACK_IFW_ROOT}" >> $GITHUB_ENV
-
-          # Add the bin directory to PATH
-          echo "${CPACK_IFW_ROOT}/bin" >> $GITHUB_PATH
 
       - name: Verify Installation
         shell: bash
         run: |
           echo "Current PATH: $PATH"
           echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
-          ls -la "$CPACK_IFW_ROOT/bin/binarycreator"
-          if [ -f "$CPACK_IFW_ROOT/bin/binarycreator" ]; then
+          ls -la "$CPACK_IFW_ROOT/Resources/binarycreator"
+          if [ -f "$CPACK_IFW_ROOT/Resources/binarycreator" ]; then
             echo "binarycreator found"
           else
-            echo "binarycreator not found at $CPACK_IFW_ROOT/bin/binarycreator"
+            echo "binarycreator not found at $CPACK_IFW_ROOT/Resources/binarycreator"
             exit 1
           fi
 
