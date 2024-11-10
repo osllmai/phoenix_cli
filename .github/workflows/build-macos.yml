@@ -54,6 +54,7 @@ jobs:
           echo "Checking binarycreator:"
           find "$HOME/QtIFW" -name "binarycreator"
           which binarycreator || echo "binarycreator not found in PATH"
+          which cpack || echo "cpack not found in PATH"
 
       - name: Create Build Directory
         run: mkdir build
@@ -65,17 +66,24 @@ jobs:
         run: |
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
-                  -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
-                  -DCPACK_GENERATOR="IFW"
+                   -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
+                   -DCPACK_GENERATOR="IFW"
 
       - name: Build with Make
         run: |
           cd build
           make -j$(sysctl -n hw.ncpu)
 
+      - name: Package with CPack
+        run: |
+          cd build
+          cpack
+
       - name: Upload package artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: packaged-artifacts
-          path: build/bin/phoenix.app
+          path: |
+            build/*.dmg
+            build/bin/phoenix.app
