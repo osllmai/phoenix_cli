@@ -32,22 +32,21 @@ jobs:
           # Create QtIFW directory
           mkdir -p $HOME/QtIFW
           
-          # List mounted volumes to verify the correct path
-          ls -la /Volumes/
-          
-          # Copy Qt Installer Framework.app to the runner's home directory
+          # Copy Qt Installer Framework files
           cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app" "$HOME/QtIFW/"
           
           # Unmount the DMG
           hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
           
-          # Add Qt Installer Framework binaries to PATH
-          echo "PATH=\"$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS:\$PATH\"" >> $GITHUB_ENV
-          echo 'Qt6_DIR="/opt/homebrew/opt/qt@6/lib/cmake/Qt6"' >> $GITHUB_ENV
+          # Set environment variables
+          echo "export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS:$PATH" >> $GITHUB_ENV
+          echo "export Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
 
-      - name: Verify binarycreator installation
+      - name: Verify Installation
+        shell: bash
         run: |
-          ls -la $HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS/
+          echo "Current PATH: $PATH"
+          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS" || echo "Directory not accessible"
           which binarycreator || echo "binarycreator not found in PATH"
           binarycreator --version || echo "Unable to run binarycreator"
 
