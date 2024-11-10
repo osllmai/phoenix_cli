@@ -39,16 +39,21 @@ jobs:
           hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
           
           # Set environment variables
-          echo "export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS:$PATH" >> $GITHUB_ENV
-          echo "export Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
+          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents"
+          echo "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
+          echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
+          echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
 
       - name: Verify Installation
         shell: bash
         run: |
           echo "Current PATH: $PATH"
-          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS" || echo "Directory not accessible"
+          echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
+          echo "Checking QtIFW installation:"
+          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS"
+          echo "Checking binarycreator:"
+          find "$HOME/QtIFW" -name "binarycreator"
           which binarycreator || echo "binarycreator not found in PATH"
-          binarycreator --version || echo "Unable to run binarycreator"
 
       - name: Create Build Directory
         run: mkdir build
@@ -59,7 +64,9 @@ jobs:
           CMAKE_PREFIX_PATH: /opt/homebrew/opt/qt@6
         run: |
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+                  -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
+                  -DCPACK_GENERATOR="IFW"
 
       - name: Build with Make
         run: |
@@ -67,9 +74,13 @@ jobs:
           make -j$(sysctl -n hw.ncpu)
 
       - name: Package with CPack
+        env:
+          CPACK_IFW_ROOT: ${{ env.CPACK_IFW_ROOT }}
         run: |
           cd build
-          cpack
+          ls -la "$CPACK_IFW_ROOT/MacOS"  # Verify the path before running cpack
+          echo "Using CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
+          cpack -G IFW -D CPACK_IFW_ROOT="$CPACK_IFW_ROOT" -V
 
       - name: Upload package artifacts
         if: success()
