@@ -16,6 +16,19 @@ jobs:
       - name: Check out the code
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: |
+          # Install required packages
+          brew install curl sqlite3 boost openssl
+          
+          # Install Qt6 and required components
+          brew install qt@6
+          brew link qt@6 --force --overwrite
+          
+          # Set up the Qt environment variables (required for CMake to find Qt6)
+          echo 'export PATH="/usr/local/opt/qt@6/bin:$PATH"' >> $GITHUB_ENV
+          echo 'export Qt6_DIR="/usr/local/opt/qt@6/lib/cmake/Qt6"' >> $GITHUB_ENV
+
       - name: Set up CMake
         uses: lukka/get-cmake@latest
         with:
@@ -25,6 +38,9 @@ jobs:
         run: mkdir build
 
       - name: Configure with CMake
+        env:
+          OPENSSL_ROOT_DIR: /usr/local/opt/openssl
+          CMAKE_PREFIX_PATH: /usr/local/opt/qt@6
         run: |
           cd build
           cmake ..
