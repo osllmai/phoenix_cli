@@ -27,47 +27,43 @@ jobs:
           curl -Lo qtifw.dmg https://download.qt.io/official_releases/qt-installer-framework/${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.dmg
 
           # Mount the DMG
-          hdiutil attach qtifw.dmg -mountpoint /Volumes/qtifw
+          hdiutil attach qtifw.dmg
 
-          # Copy the Qt Installer Framework files
-          cp -R /Volumes/qtifw/QtInstallerFramework.app $HOME/QtIFW.app
+          # Create QtIFW directory
+          mkdir -p $HOME/QtIFW
+
+          # Copy Qt Installer Framework files
+          cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app" "$HOME/QtIFW/"
 
           # Unmount the DMG
-          hdiutil detach /Volumes/qtifw
+          hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
 
-          # Set CPACK_IFW_ROOT to the Contents directory of the app
-          export CPACK_IFW_ROOT="$HOME/QtIFW.app/Contents"
-
-          # Add the directory containing binarycreator to PATH
-          echo "${CPACK_IFW_ROOT}/Resources" >> $GITHUB_PATH
-
-          # Export environment variables
-          echo "Qt6_DIR=$(brew --prefix qt@6)/lib/cmake/Qt6" >> $GITHUB_ENV
-          echo "CPACK_IFW_ROOT=${CPACK_IFW_ROOT}" >> $GITHUB_ENV
+          # Set environment variables
+          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents"
+          echo "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
+          echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
+          echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
 
       - name: Verify Installation
         shell: bash
         run: |
           echo "Current PATH: $PATH"
           echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
-          ls -la "$CPACK_IFW_ROOT/Resources/binarycreator"
-          if [ -f "$CPACK_IFW_ROOT/Resources/binarycreator" ]; then
-            echo "binarycreator found"
-          else
-            echo "binarycreator not found at $CPACK_IFW_ROOT/Resources/binarycreator"
-            exit 1
-          fi
+          echo "Checking QtIFW installation:"
+          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS"
+          echo "Checking binarycreator:"
+          find "$HOME/QtIFW" -name "binarycreator"
+          which binarycreator || echo "binarycreator not found in PATH"
+          which cpack || echo "cpack not found in PATH"
 
       - name: Create Build Directory
         run: mkdir build
 
       - name: Configure with CMake
         env:
-          OPENSSL_ROOT_DIR: $(brew --prefix openssl)
-          CMAKE_PREFIX_PATH: $(brew --prefix qt@6)
-          CPACK_IFW_ROOT: ${{ env.CPACK_IFW_ROOT }}
+          OPENSSL_ROOT_DIR: /opt/homebrew/opt/openssl
+          CMAKE_PREFIX_PATH: /opt/homebrew/opt/qt@6
         run: |
-          echo "CPACK_IFW_ROOT during CMake configure: $CPACK_IFW_ROOT"
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
                    -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
@@ -78,23 +74,10 @@ jobs:
           cd build
           make -j$(sysctl -n hw.ncpu)
 
-      - name: Verify CPack Configuration
-        run: |
-          cd build
-          grep -i "CPACK_IFW_ROOT" CPackConfig.cmake
-
       - name: Package with CPack
-        env:
-          CPACK_IFW_ROOT: ${{ env.CPACK_IFW_ROOT }}
         run: |
           cd build
-          echo "CPACK_IFW_ROOT during cpack: $CPACK_IFW_ROOT"
-          cpack -V --config ./CPackConfig.cmake
-
-      - name: Output IFW Error Log
-        if: failure()
-        run: |
-          cat build/_CPack_Packages/Darwin/IFW/IFWOutput.log
+          cpack
 
       - name: Upload package artifacts
         if: success()
