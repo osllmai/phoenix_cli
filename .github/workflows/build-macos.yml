@@ -26,19 +26,14 @@ jobs:
           QTIFW_VERSION=4.8.1
           curl -Lo qtifw.dmg https://download.qt.io/official_releases/qt-installer-framework/${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.dmg
 
-          # Mount the DMG and show its contents
+          # Mount the DMG
           hdiutil attach qtifw.dmg
-          echo "Contents of mounted DMG:"
-          ls -la "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
+
+          # Create QtIFW directory
+          sudo mkdir -p "/opt/QtIFW"
           
-          # Create QtIFW directory structure
-          sudo mkdir -p "/opt/QtIFW/Contents/MacOS"
-          sudo mkdir -p "/opt/QtIFW/Contents/Resources"
-          
-          # Copy files with explicit paths and verbose output
-          echo "Copying QtIFW files..."
-          sudo cp -Rv "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS/"* "/opt/QtIFW/Contents/MacOS/"
-          sudo cp -Rv "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/Resources/"* "/opt/QtIFW/Contents/Resources/"
+          # Copy the entire Contents directory
+          sudo cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app/Contents" "/opt/QtIFW/"
           
           # Set proper permissions
           sudo chmod -R 755 "/opt/QtIFW"
@@ -46,16 +41,12 @@ jobs:
           # Unmount the DMG
           hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
 
-          # Verify the binary exists and is executable
-          echo "Verifying binarycreator installation..."
-          ls -la "/opt/QtIFW/Contents/MacOS/binarycreator" || echo "binarycreator not found!"
-
           # Create symlink to binarycreator
-          sudo ln -sf "/opt/QtIFW/Contents/MacOS/binarycreator" "/usr/local/bin/binarycreator"
+          sudo ln -s "/opt/QtIFW/Contents/MacOS/binarycreator" "/usr/local/bin/binarycreator"
 
           # Set environment variables
           echo "QTIFW_ROOT=/opt/QtIFW/Contents" >> $GITHUB_ENV
-          echo "PATH=/opt/QtIFW/Contents/MacOS:/usr/local/bin:$PATH" >> $GITHUB_ENV
+          echo "PATH=/opt/QtIFW/Contents/MacOS:$PATH" >> $GITHUB_ENV
           echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
 
       - name: Verify Installation
@@ -63,13 +54,17 @@ jobs:
           echo "Current PATH: $PATH"
           echo "QTIFW_ROOT: $QTIFW_ROOT"
           echo "Checking QtIFW installation:"
-          echo "Contents of /opt/QtIFW/Contents/MacOS:"
           ls -la "/opt/QtIFW/Contents/MacOS"
-          echo "Testing binarycreator location and permissions:"
+          echo "Testing binarycreator:"
           which binarycreator
-          ls -la $(which binarycreator 2>/dev/null) || echo "binarycreator not found in PATH"
-          echo "Testing binarycreator execution:"
-          /opt/QtIFW/Contents/MacOS/binarycreator --version || echo "Failed to execute binarycreator"
+          binarycreator --version || echo "binarycreator version check failed"
+          
+          # Print all relevant directories
+          echo "Contents of /opt/QtIFW:"
+          ls -R /opt/QtIFW
+          
+          echo "Contents of /usr/local/bin:"
+          ls -la /usr/local/bin/binary*
 
       - name: Create Build Directory
         run: mkdir build
@@ -82,7 +77,6 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
                   -DCPACK_IFW_ROOT="/opt/QtIFW/Contents" \
-                  -DCPACK_IFW_BINARYCREATOR_EXECUTABLE="/opt/QtIFW/Contents/MacOS/binarycreator" \
                   -DCPACK_GENERATOR="IFW" \
                   -DCMAKE_VERBOSE_MAKEFILE=ON
 
@@ -96,4 +90,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: packaged-artifacts
-          path: build/*.dmg
+          path: build/bin/phoenix.app
