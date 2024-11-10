@@ -22,54 +22,50 @@ jobs:
           brew update
           brew install curl sqlite3 boost openssl cmake qt@6
 
-          # Download Qt Installer Framework DMG
-          QTIFW_VERSION=4.8.1
-          curl -Lo qtifw.dmg https://download.qt.io/official_releases/qt-installer-framework/${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.dmg
-
-          # Mount the DMG and show its contents
-          hdiutil attach qtifw.dmg
-          echo "Contents of mounted DMG:"
-          ls -la "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
-          
-          # Create QtIFW directory structure
+          # Create QtIFW directory
           sudo mkdir -p "/opt/QtIFW/Contents/MacOS"
-          sudo mkdir -p "/opt/QtIFW/Contents/Resources"
           
-          # Copy files with explicit paths and verbose output
-          echo "Copying QtIFW files..."
-          sudo cp -Rv "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS/"* "/opt/QtIFW/Contents/MacOS/"
-          sudo cp -Rv "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/Resources/"* "/opt/QtIFW/Contents/Resources/"
+          # Download and extract QtIFW
+          QTIFW_VERSION=4.8.1
+          echo "Downloading QtIFW..."
+          curl -L "https://download.qt.io/official_releases/qt-installer-framework/${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.tar.gz" -o qtifw.tar.gz
+          
+          echo "Extracting QtIFW..."
+          tar xzf qtifw.tar.gz
+          
+          echo "Listing extracted contents:"
+          ls -la
+          
+          # Copy the binaries to the correct location
+          sudo cp -v ./QtInstallerFramework-macOS-x64-*/bin/* "/opt/QtIFW/Contents/MacOS/"
           
           # Set proper permissions
           sudo chmod -R 755 "/opt/QtIFW"
           
-          # Unmount the DMG
-          hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
-
-          # Verify the binary exists and is executable
-          echo "Verifying binarycreator installation..."
-          ls -la "/opt/QtIFW/Contents/MacOS/binarycreator" || echo "binarycreator not found!"
-
-          # Create symlink to binarycreator
-          sudo ln -sf "/opt/QtIFW/Contents/MacOS/binarycreator" "/usr/local/bin/binarycreator"
-
+          # Verify binary installation
+          echo "Verifying binary installation..."
+          ls -la "/opt/QtIFW/Contents/MacOS"
+          
           # Set environment variables
           echo "QTIFW_ROOT=/opt/QtIFW/Contents" >> $GITHUB_ENV
-          echo "PATH=/opt/QtIFW/Contents/MacOS:/usr/local/bin:$PATH" >> $GITHUB_ENV
+          echo "PATH=/opt/QtIFW/Contents/MacOS:$PATH" >> $GITHUB_ENV
           echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
 
       - name: Verify Installation
         run: |
           echo "Current PATH: $PATH"
           echo "QTIFW_ROOT: $QTIFW_ROOT"
-          echo "Checking QtIFW installation:"
-          echo "Contents of /opt/QtIFW/Contents/MacOS:"
+          echo "Contents of QtIFW directory:"
           ls -la "/opt/QtIFW/Contents/MacOS"
-          echo "Testing binarycreator location and permissions:"
-          which binarycreator
-          ls -la $(which binarycreator 2>/dev/null) || echo "binarycreator not found in PATH"
-          echo "Testing binarycreator execution:"
-          /opt/QtIFW/Contents/MacOS/binarycreator --version || echo "Failed to execute binarycreator"
+          
+          echo "Testing binarycreator:"
+          if [ -f "/opt/QtIFW/Contents/MacOS/binarycreator" ]; then
+            echo "binarycreator exists"
+            /opt/QtIFW/Contents/MacOS/binarycreator --version
+          else
+            echo "binarycreator not found!"
+            exit 1
+          fi
 
       - name: Create Build Directory
         run: mkdir build
@@ -94,13 +90,11 @@ jobs:
       - name: Package with CPack
         run: |
           cd build
-          echo "Current directory content:"
-          ls -la
           echo "Using QTIFW_ROOT: $QTIFW_ROOT"
           echo "Checking binarycreator:"
-          /opt/QtIFW/Contents/MacOS/binarycreator --version
+          ls -la "/opt/QtIFW/Contents/MacOS/binarycreator"
           
-          # Run CPack with verbose output and explicit paths
+          # Run CPack with verbose output
           VERBOSE=1 cpack -G IFW --debug \
                 -D CPACK_VERBOSE=1 \
                 -D CPACK_IFW_VERBOSE=1 \
