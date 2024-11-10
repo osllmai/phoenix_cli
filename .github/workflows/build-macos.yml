@@ -20,14 +20,14 @@ jobs:
         run: |
           # Update Homebrew and install required packages
           brew update
-          brew install curl sqlite3 boost openssl cmake
+          brew install curl sqlite3 boost openssl cmake qt@6
           
-          # Install Qt6 and required components
-          brew install qt@6
-          brew link qt@6 --force --overwrite
+          # Install Qt Installer Framework
+          brew install qt-installer-framework
           
-          # Set up the Qt environment variables (required for CMake to find Qt6)
+          # Link Qt and Qt Installer Framework binaries to PATH
           echo 'export PATH="/usr/local/opt/qt@6/bin:$PATH"' >> $GITHUB_ENV
+          echo 'export PATH="/usr/local/bin:$PATH"' >> $GITHUB_ENV
           echo 'export Qt6_DIR="/usr/local/opt/qt@6/lib/cmake/Qt6"' >> $GITHUB_ENV
 
       - name: Create Build Directory
