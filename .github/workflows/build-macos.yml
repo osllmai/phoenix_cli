@@ -40,7 +40,7 @@ jobs:
 
           # Set environment variables
           QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents"
-          echo "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
+          echo "PATH=${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
           echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
           echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
 
@@ -49,12 +49,8 @@ jobs:
         run: |
           echo "Current PATH: $PATH"
           echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
-          echo "Checking QtIFW installation:"
-          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS"
-          echo "Checking binarycreator:"
-          find "$HOME/QtIFW" -name "binarycreator"
           which binarycreator || echo "binarycreator not found in PATH"
-          which cpack || echo "cpack not found in PATH"
+          ls -la "$CPACK_IFW_ROOT/MacOS"
 
       - name: Create Build Directory
         run: mkdir build
@@ -63,7 +59,9 @@ jobs:
         env:
           OPENSSL_ROOT_DIR: /opt/homebrew/opt/openssl
           CMAKE_PREFIX_PATH: /opt/homebrew/opt/qt@6
+          CPACK_IFW_ROOT: $CPACK_IFW_ROOT
         run: |
+          echo "CPACK_IFW_ROOT during CMake configure: $CPACK_IFW_ROOT"
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
                    -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
@@ -75,9 +73,17 @@ jobs:
           make -j$(sysctl -n hw.ncpu)
 
       - name: Package with CPack
+        env:
+          CPACK_IFW_ROOT: $CPACK_IFW_ROOT
         run: |
           cd build
+          echo "CPACK_IFW_ROOT during cpack: $CPACK_IFW_ROOT"
           cpack
+
+      - name: Output IFW Error Log
+        if: failure()
+        run: |
+          cat build/_CPack_Packages/Darwin/IFW/IFWOutput.log
 
       - name: Upload package artifacts
         if: success()
