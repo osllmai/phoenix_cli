@@ -141,7 +141,6 @@ set(LIBRARY_SOURCES
 )
 
 set(LIBRARY_HEADERS
-        "${PROJECT_SOURCE_DIR}/phoenix/llmodel.h"
         "chat.h"
         "commands_list.h"
         "models_list.h"
@@ -274,17 +273,15 @@ if (APPLE)
             nlohmann_json::nlohmann_json
             CURL::libcurl
             SQLite::SQLite3
-            llmodel
             Boost::system
-            llamamodel-mainline-cpu
-            llamamodel-mainline-cpu-avxonly
-            llamamodel-mainline-metal
             Crow::Crow
             jwt-cpp
             OpenSSL::SSL
             OpenSSL::Crypto
             Threads::Threads
+            llama
     )
+    target_include_directories(${LIBRARY_NAME} PUBLIC ${llama_cpp_SOURCE_DIR}/examples)
 
     set(MODEL_IMPL_TARGETS
             llmodel
