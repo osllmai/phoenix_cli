@@ -365,8 +365,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake)
 
     # Cpack location
-    set(CPACK_IFW_ROOT "/opt/QtIFW/Contents")
-    set(CPACK_IFW_BINARYCREATOR_EXECUTABLE "/opt/QtIFW/Contents/MacOS/binarycreator")
+    set(CPACK_IFW_ROOT "${CPACK_IFW_ROOT}" CACHE STRING "Path to QtIFW")
 
     # Enable verbose output
     set(CPACK_VERBOSE ON)

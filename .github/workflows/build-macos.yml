@@ -33,24 +33,28 @@ jobs:
           mkdir -p $HOME/QtIFW
 
           # Copy Qt Installer Framework files
-          cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app" "$HOME/QtIFW/"
+          cp -R "/Volumes/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.app" "$HOME/QtIFW/"
 
           # Unmount the DMG
-          hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
+          hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}"
 
           # Set environment variables
-          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents"
-          echo "PATH=${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
+          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.app/Contents"
           echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
           echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
+          echo "${QTIFW_ROOT}/MacOS" >> $GITHUB_PATH
 
       - name: Verify Installation
         shell: bash
         run: |
           echo "Current PATH: $PATH"
           echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
-          which binarycreator || echo "binarycreator not found in PATH"
-          ls -la "$CPACK_IFW_ROOT/MacOS"
+          ls -la "$CPACK_IFW_ROOT/MacOS/binarycreator"
+          if [ -f "$CPACK_IFW_ROOT/MacOS/binarycreator" ]; then
+            echo "binarycreator found"
+          else
+            echo "binarycreator not found at $CPACK_IFW_ROOT/MacOS/binarycreator"
+          fi
 
       - name: Create Build Directory
         run: mkdir build
@@ -72,13 +76,18 @@ jobs:
           cd build
           make -j$(sysctl -n hw.ncpu)
 
+      - name: Verify CPack Configuration
+        run: |
+          cd build
+          grep -i "CPACK_IFW_ROOT" CPackConfig.cmake
+
       - name: Package with CPack
         env:
           CPACK_IFW_ROOT: $CPACK_IFW_ROOT
         run: |
           cd build
           echo "CPACK_IFW_ROOT during cpack: $CPACK_IFW_ROOT"
-          cpack
+          cpack -V --config ./CPackConfig.cmake
 
       - name: Output IFW Error Log
         if: failure()
