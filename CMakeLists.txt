@@ -363,7 +363,15 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/deploy-qt-mac.cmake.in"
             "${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake" @ONLY)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake)
-    set(CPACK_IFW_ROOT $ENV{QTIFW_ROOT})
+
+    # Cpack location
+    set(CPACK_IFW_ROOT "/opt/QtIFW/Contents")
+    set(CPACK_IFW_BINARYCREATOR_EXECUTABLE "/opt/QtIFW/Contents/MacOS/binarycreator")
+
+    # Enable verbose output
+    set(CPACK_VERBOSE ON)
+    set(CPACK_IFW_VERBOSE ON)
+
     set(CPACK_IFW_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.icns")
     set(CPACK_PACKAGE_FILE_NAME "${COMPONENT_NAME_MAIN}-installer-darwin")
     set(CPACK_IFW_TARGET_DIRECTORY "@ApplicationsDir@/${COMPONENT_NAME_MAIN}")
