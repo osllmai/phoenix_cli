@@ -50,7 +50,7 @@ jobs:
           echo "Current PATH: $PATH"
           echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
           echo "Checking QtIFW installation:"
-          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS"
+          ls -la "$HOME/QtIFW/bin"
           echo "Checking binarycreator:"
           find "$HOME/QtIFW" -name "binarycreator"
           which binarycreator || echo "binarycreator not found in PATH"
