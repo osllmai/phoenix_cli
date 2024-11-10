@@ -20,40 +20,29 @@ jobs:
         run: |
           # Update Homebrew and install required packages
           brew update
-          brew install curl sqlite3 boost openssl cmake qt@6
-
-          # Download Qt Installer Framework DMG
-          QTIFW_VERSION=4.8.1
-          curl -Lo qtifw.dmg https://download.qt.io/official_releases/qt-installer-framework/${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.dmg
-
-          # Mount the DMG
-          hdiutil attach qtifw.dmg
-
-          # Create QtIFW directory
-          mkdir -p $HOME/QtIFW
-
-          # Copy Qt Installer Framework files
-          cp -R "/Volumes/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.app" "$HOME/QtIFW/"
-
-          # Unmount the DMG
-          hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}"
+          brew install curl sqlite3 boost openssl cmake qt@6 qt-installer-framework
 
           # Set environment variables
-          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-${QTIFW_VERSION}.app/Contents"
-          echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
-          echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
-          echo "${QTIFW_ROOT}/MacOS" >> $GITHUB_PATH
+          echo "Qt6_DIR=$(brew --prefix qt@6)/lib/cmake/Qt6" >> $GITHUB_ENV
+
+          # Get the installation prefix of qt-installer-framework
+          CPACK_IFW_ROOT=$(brew --prefix qt-installer-framework)
+          echo "CPACK_IFW_ROOT=${CPACK_IFW_ROOT}" >> $GITHUB_ENV
+
+          # Add the bin directory to PATH
+          echo "${CPACK_IFW_ROOT}/bin" >> $GITHUB_PATH
 
       - name: Verify Installation
         shell: bash
         run: |
           echo "Current PATH: $PATH"
           echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
-          ls -la "$CPACK_IFW_ROOT/MacOS/binarycreator"
-          if [ -f "$CPACK_IFW_ROOT/MacOS/binarycreator" ]; then
+          ls -la "$CPACK_IFW_ROOT/bin/binarycreator"
+          if [ -f "$CPACK_IFW_ROOT/bin/binarycreator" ]; then
             echo "binarycreator found"
           else
-            echo "binarycreator not found at $CPACK_IFW_ROOT/MacOS/binarycreator"
+            echo "binarycreator not found at $CPACK_IFW_ROOT/bin/binarycreator"
+            exit 1
           fi
 
       - name: Create Build Directory
@@ -61,9 +50,9 @@ jobs:
 
       - name: Configure with CMake
         env:
-          OPENSSL_ROOT_DIR: /opt/homebrew/opt/openssl
-          CMAKE_PREFIX_PATH: /opt/homebrew/opt/qt@6
-          CPACK_IFW_ROOT: $CPACK_IFW_ROOT
+          OPENSSL_ROOT_DIR: $(brew --prefix openssl)
+          CMAKE_PREFIX_PATH: $(brew --prefix qt@6)
+          CPACK_IFW_ROOT: ${{ env.CPACK_IFW_ROOT }}
         run: |
           echo "CPACK_IFW_ROOT during CMake configure: $CPACK_IFW_ROOT"
           cd build
@@ -83,7 +72,7 @@ jobs:
 
       - name: Package with CPack
         env:
-          CPACK_IFW_ROOT: $CPACK_IFW_ROOT
+          CPACK_IFW_ROOT: ${{ env.CPACK_IFW_ROOT }}
         run: |
           cd build
           echo "CPACK_IFW_ROOT during cpack: $CPACK_IFW_ROOT"

@@ -103,7 +103,7 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 FetchContent_Declare(
         llama_cpp
         GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-        GIT_TAG        b4038
+        GIT_TAG b4038
         GIT_SHALLOW TRUE
         GIT_SUBMODULES_RECURSE TRUE
 )
@@ -290,21 +290,21 @@ install(TARGETS phoenix_lib DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN})
 if (APPLE)
     # Use relative paths for DESTINATION
     set(APP_BUNDLE_PATH "bin/phoenix.app")
-#    set(MODEL_IMPL_TARGETS
-#            llamamodel-mainline-cpu
-#            llamamodel-mainline-cpu-avxonly
-#            llamamodel-mainline-metal
-#    )
-#    install(
-#            TARGETS llmodel
-#            LIBRARY DESTINATION "${APP_BUNDLE_PATH}/Contents/lib" COMPONENT ${COMPONENT_NAME_MAIN}
-#            RUNTIME DESTINATION "${APP_BUNDLE_PATH}/Contents/MacOS" COMPONENT ${COMPONENT_NAME_MAIN}
-#    )
-#    install(
-#            TARGETS ${MODEL_IMPL_TARGETS}
-#            LIBRARY DESTINATION "${APP_BUNDLE_PATH}/Contents/lib" COMPONENT ${COMPONENT_NAME_MAIN}
-#            RUNTIME DESTINATION "${APP_BUNDLE_PATH}/Contents/MacOS" COMPONENT ${COMPONENT_NAME_MAIN}
-#    )
+    #    set(MODEL_IMPL_TARGETS
+    #            llamamodel-mainline-cpu
+    #            llamamodel-mainline-cpu-avxonly
+    #            llamamodel-mainline-metal
+    #    )
+    #    install(
+    #            TARGETS llmodel
+    #            LIBRARY DESTINATION "${APP_BUNDLE_PATH}/Contents/lib" COMPONENT ${COMPONENT_NAME_MAIN}
+    #            RUNTIME DESTINATION "${APP_BUNDLE_PATH}/Contents/MacOS" COMPONENT ${COMPONENT_NAME_MAIN}
+    #    )
+    #    install(
+    #            TARGETS ${MODEL_IMPL_TARGETS}
+    #            LIBRARY DESTINATION "${APP_BUNDLE_PATH}/Contents/lib" COMPONENT ${COMPONENT_NAME_MAIN}
+    #            RUNTIME DESTINATION "${APP_BUNDLE_PATH}/Contents/MacOS" COMPONENT ${COMPONENT_NAME_MAIN}
+    #    )
 else ()
     install(
             TARGETS llmodel
@@ -364,8 +364,14 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
             "${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake" @ONLY)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake)
 
-    # Cpack location
-    set(CPACK_IFW_ROOT "${CPACK_IFW_ROOT}" CACHE STRING "Path to QtIFW")
+    # Set CPACK_IFW_ROOT from environment variable if not already set
+    if (NOT DEFINED CPACK_IFW_ROOT)
+        if (DEFINED ENV{CPACK_IFW_ROOT})
+            set(CPACK_IFW_ROOT "$ENV{CPACK_IFW_ROOT}" CACHE PATH "Path to QtIFW" FORCE)
+        else ()
+            message(FATAL_ERROR "CPACK_IFW_ROOT is not set. Please set CPACK_IFW_ROOT to the path of the Qt Installer Framework.")
+        endif ()
+    endif ()
 
     # Enable verbose output
     set(CPACK_VERBOSE ON)
@@ -376,6 +382,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
     set(CPACK_IFW_TARGET_DIRECTORY "@ApplicationsDir@/${COMPONENT_NAME_MAIN}")
     set(CPACK_BUNDLE_NAME ${COMPONENT_NAME_MAIN})
     set(CPACK_BUNDLE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.icns")
+
 endif ()
 
 set(CPACK_PACKAGE_INSTALL_DIRECTORY ${COMPONENT_NAME_MAIN})
