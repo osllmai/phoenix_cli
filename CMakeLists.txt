@@ -363,7 +363,7 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
     configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/deploy-qt-mac.cmake.in"
             "${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake" @ONLY)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake)
-    set(CPACK_IFW_ROOT "~/Qt/Tools/QtInstallerFramework/4.6")
+    set(CPACK_IFW_ROOT $ENV{QTIFW_ROOT})
     set(CPACK_IFW_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon.icns")
     set(CPACK_PACKAGE_FILE_NAME "${COMPONENT_NAME_MAIN}-installer-darwin")
     set(CPACK_IFW_TARGET_DIRECTORY "@ApplicationsDir@/${COMPONENT_NAME_MAIN}")

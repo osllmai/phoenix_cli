@@ -30,30 +30,30 @@ jobs:
           hdiutil attach qtifw.dmg
 
           # Create QtIFW directory
-          mkdir -p $HOME/QtIFW
-
-          # Copy Qt Installer Framework files
-          cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app" "$HOME/QtIFW/"
-
+          sudo mkdir -p "/opt/QtIFW"
+          
+          # Copy Qt Installer Framework files (using sudo to avoid permission issues)
+          sudo cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS/" "/opt/QtIFW/"
+          
+          # Set proper permissions
+          sudo chmod -R 755 "/opt/QtIFW"
+          
           # Unmount the DMG
           hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
 
           # Set environment variables
-          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents"
-          echo "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
+          echo "QTIFW_ROOT=/opt/QtIFW" >> $GITHUB_ENV
+          echo "PATH=/opt/QtIFW:$PATH" >> $GITHUB_ENV
           echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
-          echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
 
       - name: Verify Installation
-        shell: bash
         run: |
           echo "Current PATH: $PATH"
-          echo "CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
+          echo "QTIFW_ROOT: $QTIFW_ROOT"
           echo "Checking QtIFW installation:"
-          ls -la "$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS"
-          echo "Checking binarycreator:"
-          find "$HOME/QtIFW" -name "binarycreator"
-          which binarycreator || echo "binarycreator not found in PATH"
+          ls -la "/opt/QtIFW"
+          echo "Testing binarycreator:"
+          /opt/QtIFW/binarycreator --version || echo "binarycreator not found"
 
       - name: Create Build Directory
         run: mkdir build
@@ -65,7 +65,7 @@ jobs:
         run: |
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release \
-                  -DCPACK_IFW_ROOT="$CPACK_IFW_ROOT" \
+                  -DCPACK_IFW_ROOT="/opt/QtIFW" \
                   -DCPACK_GENERATOR="IFW"
 
       - name: Build with Make
@@ -74,13 +74,10 @@ jobs:
           make -j$(sysctl -n hw.ncpu)
 
       - name: Package with CPack
-        env:
-          CPACK_IFW_ROOT: ${{ env.CPACK_IFW_ROOT }}
         run: |
           cd build
-          ls -la "$CPACK_IFW_ROOT/MacOS"  # Verify the path before running cpack
-          echo "Using CPACK_IFW_ROOT: $CPACK_IFW_ROOT"
-          cpack -G IFW -D CPACK_IFW_ROOT="$CPACK_IFW_ROOT" -V
+          echo "Using QTIFW_ROOT: $QTIFW_ROOT"
+          cpack -G IFW -V
 
       - name: Upload package artifacts
         if: success()
