@@ -39,7 +39,7 @@ jobs:
           hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
 
           # Set environment variables
-          QTIFW_ROOT="$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents"
+          QTIFW_ROOT="$HOME/QtIFW/bin"
           echo "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${QTIFW_ROOT}/MacOS:$PATH" >> $GITHUB_ENV
           echo "Qt6_DIR=/opt/homebrew/opt/qt@6/lib/cmake/Qt6" >> $GITHUB_ENV
           echo "CPACK_IFW_ROOT=${QTIFW_ROOT}" >> $GITHUB_ENV
