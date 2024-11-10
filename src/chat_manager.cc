@@ -2,6 +2,7 @@
 #include "header.h"
 #include "directory_manager.h"
 #include "database_manager.h"
+#include "llama.h"
 
 #include <string>
 #include <set>
@@ -39,23 +40,23 @@ std::string ChatManager::generate_unique_id() {
 }
 
 
-bool ChatManager::create_chat_config_file(const std::string &id, const chatParams &params) {
+bool ChatManager::create_chat_config_file(const std::string &id) {
     // create chats directory
     DirectoryManager::create_chats_directory();
 
     // create configs in json object
     json j;
     j["name"] = "Config for Chat ID " + id;
-    j["load_params"]["n_ctx"] = params.n_ctx;
-    j["load_params"]["n_batch"] = params.n_batch;
-    j["load_params"]["seed"] = params.seed;
-    j["inference_params"]["n_threads"] = params.n_threads;
-    j["inference_params"]["n_predict"] = params.n_predict;
-    j["inference_params"]["top_p"] = params.top_p;
-    j["inference_params"]["top_k"] = params.top_k;
-    j["inference_params"]["temp"] = params.temp;
-    j["inference_params"]["repeat_penalty"] = params.repeat_penalty;
-    j["inference_params"]["repeat_penalty"] = params.prompt;
+//    j["load_params"]["n_ctx"] = context_params.n_ctx;
+//    j["load_params"]["n_batch"] = context_params.n_batch;
+//    j["load_params"]["seed"] = params.seed;
+//    j["inference_params"]["n_threads"] = context_params.n_threads;
+//    j["inference_params"]["n_predict"] = params.n_predict;
+//    j["inference_params"]["top_p"] = params.top_p;
+//    j["inference_params"]["top_k"] = params.top_k;
+//    j["inference_params"]["temp"] = params.temp;
+//    j["inference_params"]["repeat_penalty"] = params.repeat_penalty;
+//    j["inference_params"]["repeat_penalty"] = params.prompt;
 
     std::string json_str = j.dump(4);
 

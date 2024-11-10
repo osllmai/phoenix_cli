@@ -99,6 +99,17 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
         Svg
 )
 
+# Fetch llama.cpp
+FetchContent_Declare(
+        llama_cpp
+        GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
+        GIT_TAG        b4038
+)
+FetchContent_MakeAvailable(llama_cpp)
+
+#target_link_libraries(${PROJECT_NAME} PRIVATE llama)
+
+
 # Enable automatic processing of Qt-specific files
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -208,7 +219,6 @@ message(STATUS "qmake binary: ${QMAKE_EXECUTABLE}")
 message(STATUS "Qt 6 root directory: ${Qt6_ROOT_DIR}")
 
 # Add subdirectories
-add_subdirectory(phoenix)
 add_subdirectory(src)
 add_subdirectory(app)
 
@@ -230,7 +240,6 @@ if (APPLE)
             MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
             OUTPUT_NAME phoenix
     )
-    add_dependencies(phoenix ggml-metal)
 endif ()
 
 
@@ -279,21 +288,21 @@ install(TARGETS phoenix_lib DESTINATION bin COMPONENT ${COMPONENT_NAME_MAIN})
 if (APPLE)
     # Use relative paths for DESTINATION
     set(APP_BUNDLE_PATH "bin/phoenix.app")
-    set(MODEL_IMPL_TARGETS
-            llamamodel-mainline-cpu
-            llamamodel-mainline-cpu-avxonly
-            llamamodel-mainline-metal
-    )
-    install(
-            TARGETS llmodel
-            LIBRARY DESTINATION "${APP_BUNDLE_PATH}/Contents/lib" COMPONENT ${COMPONENT_NAME_MAIN}
-            RUNTIME DESTINATION "${APP_BUNDLE_PATH}/Contents/MacOS" COMPONENT ${COMPONENT_NAME_MAIN}
-    )
-    install(
-            TARGETS ${MODEL_IMPL_TARGETS}
-            LIBRARY DESTINATION "${APP_BUNDLE_PATH}/Contents/lib" COMPONENT ${COMPONENT_NAME_MAIN}
-            RUNTIME DESTINATION "${APP_BUNDLE_PATH}/Contents/MacOS" COMPONENT ${COMPONENT_NAME_MAIN}
-    )
+#    set(MODEL_IMPL_TARGETS
+#            llamamodel-mainline-cpu
+#            llamamodel-mainline-cpu-avxonly
+#            llamamodel-mainline-metal
+#    )
+#    install(
+#            TARGETS llmodel
+#            LIBRARY DESTINATION "${APP_BUNDLE_PATH}/Contents/lib" COMPONENT ${COMPONENT_NAME_MAIN}
+#            RUNTIME DESTINATION "${APP_BUNDLE_PATH}/Contents/MacOS" COMPONENT ${COMPONENT_NAME_MAIN}
+#    )
+#    install(
+#            TARGETS ${MODEL_IMPL_TARGETS}
+#            LIBRARY DESTINATION "${APP_BUNDLE_PATH}/Contents/lib" COMPONENT ${COMPONENT_NAME_MAIN}
+#            RUNTIME DESTINATION "${APP_BUNDLE_PATH}/Contents/MacOS" COMPONENT ${COMPONENT_NAME_MAIN}
+#    )
 else ()
     install(
             TARGETS llmodel

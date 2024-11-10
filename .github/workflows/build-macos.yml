@@ -1,0 +1,47 @@
+name: Build and Package C++ Project on macOS
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v2
+
+      - name: Set up CMake
+        uses: lukka/get-cmake@v3
+        with:
+          cmake-version: '3.16'
+
+      - name: Create Build Directory
+        run: mkdir build
+
+      - name: Configure with CMake
+        run: |
+          cd build
+          cmake ..
+
+      - name: Build with Make
+        run: |
+          cd build
+          make
+
+      - name: Package with CPack
+        run: |
+          cd build
+          cpack
+
+      - name: Upload package artifacts
+        if: success()
+        uses: actions/upload-artifact@v2
+        with:
+          name: packaged-artifacts
+          path: build/*.dmg
