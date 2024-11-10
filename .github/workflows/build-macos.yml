@@ -17,9 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up CMake
-        uses: lukka/get-cmake@v3
-        with:
-          cmake-version: '3.16'
+        uses: lukka/get-cmake@3.26.0
 
       - name: Create Build Directory
         run: mkdir build
