@@ -22,12 +22,14 @@ jobs:
           brew update
           brew install curl sqlite3 boost openssl cmake qt@6
           
-          # Install Qt Installer Framework
-          brew install qt-installer-framework
+          # Download and install Qt Installer Framework
+          curl -LO https://download.qt.io/official_releases/qt-installer-framework/4.6.0/QtInstallerFramework-4.6.0-mac-x64.dmg
+          hdiutil attach QtInstallerFramework-4.6.0-mac-x64.dmg
+          sudo cp -R /Volumes/QtInstallerFramework-4.6.0/QtInstallerFramework /usr/local/QtInstallerFramework
+          hdiutil detach /Volumes/QtInstallerFramework-4.6.0
           
-          # Link Qt and Qt Installer Framework binaries to PATH
-          echo 'export PATH="/usr/local/opt/qt@6/bin:$PATH"' >> $GITHUB_ENV
-          echo 'export PATH="/usr/local/bin:$PATH"' >> $GITHUB_ENV
+          # Add Qt Installer Framework to PATH
+          echo 'export PATH="/usr/local/QtInstallerFramework/bin:$PATH"' >> $GITHUB_ENV
           echo 'export Qt6_DIR="/usr/local/opt/qt@6/lib/cmake/Qt6"' >> $GITHUB_ENV
 
       - name: Create Build Directory
