@@ -29,29 +29,35 @@ jobs:
           # Mount the DMG
           hdiutil attach qtifw.dmg
           
-          # Copy Qt Installer Framework.app to a directory within the runner's home directory
+          # Create QtIFW directory
           mkdir -p $HOME/QtIFW
-          cp -R "/Volumes/Qt Installer Framework/Qt Installer Framework.app" "$HOME/QtIFW/"
+          
+          # List mounted volumes to verify the correct path
+          ls -la /Volumes/
+          
+          # Copy Qt Installer Framework.app to the runner's home directory
+          cp -R "/Volumes/QtInstallerFramework-macOS-x64-4.8.1/QtInstallerFramework-macOS-x64-4.8.1.app" "$HOME/QtIFW/"
           
           # Unmount the DMG
-          hdiutil detach "/Volumes/Qt Installer Framework"
+          hdiutil detach "/Volumes/QtInstallerFramework-macOS-x64-4.8.1"
           
           # Add Qt Installer Framework binaries to PATH
-          echo "PATH=\"$HOME/QtIFW/Qt Installer Framework.app/Contents/bin:\$PATH\"" >> $GITHUB_ENV
-          echo 'Qt6_DIR="/usr/local/opt/qt@6/lib/cmake/Qt6"' >> $GITHUB_ENV
+          echo "PATH=\"$HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS:\$PATH\"" >> $GITHUB_ENV
+          echo 'Qt6_DIR="/opt/homebrew/opt/qt@6/lib/cmake/Qt6"' >> $GITHUB_ENV
 
       - name: Verify binarycreator installation
         run: |
-          which binarycreator
-          binarycreator --version
+          ls -la $HOME/QtIFW/QtInstallerFramework-macOS-x64-4.8.1.app/Contents/MacOS/
+          which binarycreator || echo "binarycreator not found in PATH"
+          binarycreator --version || echo "Unable to run binarycreator"
 
       - name: Create Build Directory
         run: mkdir build
 
       - name: Configure with CMake
         env:
-          OPENSSL_ROOT_DIR: /usr/local/opt/openssl
-          CMAKE_PREFIX_PATH: /usr/local/opt/qt@6
+          OPENSSL_ROOT_DIR: /opt/homebrew/opt/openssl
+          CMAKE_PREFIX_PATH: /opt/homebrew/opt/qt@6
         run: |
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
