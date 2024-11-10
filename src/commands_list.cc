@@ -8,6 +8,7 @@
 #include "api/api.h"
 #include "web_server.h"
 #include "openai.h"
+#include "llama.h"
 
 
 #include <iostream>
@@ -63,32 +64,37 @@ void print_help() {
 }
 
 
-void handle_run_command(const std::string &model_name) {
-    sqlite3 *db;
-    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-        std::string model_path =
-                DatabaseManager::get_path_by_model_name(db, model_name);
+void handle_run_command(const std::string& model_name) {
+    try {
+
+        sqlite3* db;
+        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+
+        if (sqlite3_open(db_path.c_str(), &db) != SQLITE_OK) {
+            throw std::runtime_error("Failed to open database");
+        }
+
+
+        std::unique_ptr<sqlite3, decltype(&sqlite3_close)> db_guard(db, sqlite3_close);
+
+        std::string model_path = DatabaseManager::get_path_by_model_name(db, model_name);
+
         if (model_path.empty()) {
-            std::cerr << "Failed to find model: " << model_name << std::endl;
-            sqlite3_close(db);
-            return;
+            throw std::runtime_error("Failed to find model: " + model_name);
         }
 
         json data = model_data(model_name);
-        if (data.contains("promptTemplate") && data["promptTemplate"].is_string()) {
-            std::string prompt_template = data["promptTemplate"].get<std::string>();
-            sqlite3_close(db);
-            PhoenixChat::run_command(prompt_template, model_path);
-        } else {
-            std::cerr
-                    << "Error: 'promptTemplate' is missing or not a string for model: "
-                    << model_name << std::endl;
-            sqlite3_close(db);
-            return;
+
+        if (!data.contains("promptTemplate") || !data["promptTemplate"].is_string()) {
+            throw std::runtime_error("Error: 'promptTemplate' is missing or not a string for model: " + model_name);
         }
-    } else {
-        std::cerr << "Failed to open database." << std::endl;
+
+        auto resources = PhoenixChat::load_model(model_path);
+
+        PhoenixChat::handle_conversation(*resources, true);
+
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal error in run command: " << e.what() << std::endl;
     }
 }
 
@@ -155,22 +161,8 @@ void handle_list_command(const std::string &option) {
 }
 
 void handle_exec_command(const std::string &model_path) {
-    std::string prompt_template;
-    std::cout << "Enter your prompt template" << std::endl;
-    std::cout << "If your leave blank, default template used:\n "
-                 "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|"
-                 "start_header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>"
-              << std::endl;
-    std::cout << ">>> ";
-
-    std::getline(std::cin, prompt_template);
-
-    if (prompt_template.empty()) {
-        prompt_template =
-                "<|start_header_id|>user<|end_header_id|>\n\n%1<|eot_id|><|start_"
-                "header_id|>assistant<|end_header_id|>\n\n%2<|eot_id|>";
-    }
-    PhoenixChat::run_command(prompt_template, model_path);
+    auto recources = PhoenixChat::load_model(model_path);
+    PhoenixChat::handle_conversation(*recources, true);
 }
 
 //void handle_history_command(const std::string &chat_id) {
