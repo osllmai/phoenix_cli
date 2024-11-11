@@ -9,6 +9,7 @@
 #include "web_server.h"
 #include "openai.h"
 #include "llama.h"
+#include "embedding.h"
 
 
 #include <iostream>
@@ -40,6 +41,8 @@ void print_help() {
     std::cout << "  show\t\tShow full information about a model" << std::endl;
     std::cout << "  run\t\tExecutes a model based on your specified input"
               << std::endl;
+    std::cout << "  embedding\t\tConvert text to embedding"
+              << std::endl;
     std::cout << "  exec\t\tRuns a model directly on your local machine"
               << std::endl;
     std::cout
@@ -63,11 +66,15 @@ void print_help() {
               << std::endl;
 }
 
+//void handle_embedding_command(int argc, char **argv) {
+//    PhoenixEmbedding::embedding(argc,argv);
+//}
 
-void handle_run_command(const std::string& model_name) {
+
+void handle_run_command(const std::string &model_name) {
     try {
 
-        sqlite3* db;
+        sqlite3 *db;
         const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
 
         if (sqlite3_open(db_path.c_str(), &db) != SQLITE_OK) {
@@ -93,7 +100,7 @@ void handle_run_command(const std::string& model_name) {
 
         PhoenixChat::handle_conversation(*resources, true);
 
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << "Fatal error in run command: " << e.what() << std::endl;
     }
 }
@@ -297,8 +304,6 @@ void handle_serve_command(const std::string &model_name) {
 }
 
 
-
-
 void handle_openai_command(const std::string &model) {
     try {
         // Read the API key from the environment variable
@@ -380,6 +385,23 @@ void show_commands(int argc, char **argv) {
                 handle_pull_command(argv[i + 1]);
                 return;
             }
+        } else if (arg == "embedding") {
+            // Filter out the 'embedding' argument and pass the rest to the embedding function
+            std::vector<std::string> filtered_args;
+            for (int j = 0; j < argc; ++j) {
+                if (j == i) continue; // Skip the 'embedding' argument
+                filtered_args.push_back(argv[j]);
+            }
+
+            // Convert the filtered arguments back to char**
+            std::vector<char *> filtered_argv;
+            for (const auto &str: filtered_args) {
+                filtered_argv.push_back(const_cast<char *>(str.c_str()));
+            }
+
+            // Call the embedding function with the filtered arguments
+            PhoenixEmbedding::embedding(filtered_argv.size(), filtered_argv.data());
+            return;
         } else if (arg == "--version" || arg == "-v") {
             std::cout << "Current version is " << VERSION << std::endl;
         } else if (arg == "list") {
