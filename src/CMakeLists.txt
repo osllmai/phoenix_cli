@@ -53,6 +53,7 @@ set(LIBRARY_SOURCES
         "parse_json.cc"
         "utils.cc"
         "web_server.cc"
+        "embedding.cc"
         "api/api.cc"
         "api/models/database.cc"
         "api/utils/utils.cc"
@@ -152,6 +153,7 @@ set(LIBRARY_HEADERS
         "chat_manager.h"
         "database_manager.h"
         "web_server.h"
+        "embedding.h"
         "api/include/crow_all.h"
         "api/include/utils/utils.h"
         "api/include/models/database.h"
@@ -244,7 +246,6 @@ set(LIBRARY_HEADERS
 set(LIBRARY_INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${PROJECT_SOURCE_DIR}/src
-        ${PROJECT_SOURCE_DIR}/phoenix
         ${Boost_INCLUDE_DIRS}
         ${SQLite3_INCLUDE_DIR}
         ${CURL_INCLUDE_DIR}
@@ -270,18 +271,20 @@ endif ()
 # Link libraries based on the platform
 if (APPLE)
     target_link_libraries(${LIBRARY_NAME} PUBLIC
+            OpenSSL::SSL
+            OpenSSL::Crypto
             nlohmann_json::nlohmann_json
+            jwt-cpp
             CURL::libcurl
             SQLite::SQLite3
             Boost::system
             Crow::Crow
-            jwt-cpp
-            OpenSSL::SSL
-            OpenSSL::Crypto
             Threads::Threads
             llama
+            common
+
     )
-    target_include_directories(${LIBRARY_NAME} PUBLIC ${llama_cpp_SOURCE_DIR}/examples)
+    target_compile_features(${LIBRARY_NAME} PRIVATE cxx_std_11)
 
     set(MODEL_IMPL_TARGETS
             llmodel
