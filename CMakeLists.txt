@@ -99,17 +99,22 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
         Svg
 )
 
+# ************************************************************************
 # Fetch llama.cpp
-FetchContent_Declare(
-        llama_cpp
-        GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-        GIT_TAG b4038
-        GIT_SHALLOW TRUE
-        GIT_SUBMODULES_RECURSE TRUE
-)
-FetchContent_MakeAvailable(llama_cpp)
-
+#FetchContent_Declare(
+#        llama_cpp
+#        GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
+#        GIT_TAG b4038
+#        GIT_SHALLOW TRUE
+#        GIT_SUBMODULES_RECURSE TRUE
+#)
+#FetchContent_MakeAvailable(llama_cpp)
 #target_link_libraries(${PROJECT_NAME} PRIVATE llama)
+# ************************************************************************
+
+# Add the llama.cpp submodule
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/llama.cpp)
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/llama.cpp/common)
 
 
 # Enable automatic processing of Qt-specific files
@@ -364,14 +369,9 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES Darwin)
             "${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake" @ONLY)
     set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_BINARY_DIR}/cmake/deploy-qt-mac.cmake)
 
-    # Set CPACK_IFW_ROOT from environment variable if not already set
-    if (NOT DEFINED CPACK_IFW_ROOT)
-        if (DEFINED ENV{CPACK_IFW_ROOT})
-            set(CPACK_IFW_ROOT "$ENV{CPACK_IFW_ROOT}" CACHE PATH "Path to Qt Installer Framework")
-        else ()
-            message(FATAL_ERROR "CPACK_IFW_ROOT is not set. Please set CPACK_IFW_ROOT to the path of the Qt Installer Framework.")
-        endif ()
-    endif ()
+
+    set(CPACK_IFW_ROOT "~/Qt/Tools/QtInstallerFramework/4.6")
+
 
 
     # Enable verbose output
