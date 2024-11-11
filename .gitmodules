@@ -7,3 +7,6 @@
 [submodule "phoenix/llama.cpp-mainline"]
 	path = phoenix/llama.cpp-mainline
 	url = https://github.com/nomic-ai/llama.cpp.git
+[submodule "external/llama.cpp"]
+	path = external/llama.cpp
+	url = git@github.com:ggerganov/llama.cpp.git
