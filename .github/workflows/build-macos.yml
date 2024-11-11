@@ -18,6 +18,9 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          # Download dependencies 
+          git submodule update --init --recursive
+          
           # Update Homebrew and install required packages
           brew update
           brew install curl sqlite3 boost openssl cmake qt@6
