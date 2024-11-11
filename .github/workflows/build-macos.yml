@@ -13,14 +13,23 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add SSH key to known_hosts
+        run: |
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
       - name: Check out the code
         uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
-          # Download dependencies 
+          # Download dependencies
           git submodule update --init --recursive
-          
+
           # Update Homebrew and install required packages
           brew update
           brew install curl sqlite3 boost openssl cmake qt@6
