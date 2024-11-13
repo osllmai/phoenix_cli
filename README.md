@@ -151,27 +151,28 @@ After building the project, you can run the executable from the build directory:
 
 ```bash
 ./build/bin/phoenix_cli --help
-PhoenixCLI is a large language model runner developed by osllm.ai. It is open-source software that you can use freely to run and manage large language models.
 
+PhoenixCLI is a large language model runner developed by osllm.ai. It is open-source software that you can use freely
+to run and manage large language models.
 Usage:
 phoenix_cli [flags]
 phoenix_cli [command]
 
 Available Commands:
-  serve		Start the phoenix_cli server
-  list		Displays a list of all available models that you can run or manage
-  show		Show full information about a model
-  run		Executes a model based on your specified input
-  exec		Runs a model directly on your local machine
-  pull		Retrieves a model from the registry and stores it locally
-  rm		Remove a model from your local storage
-  history	Shows a list of your previous chats
-  help		Provides detailed information and guidance about any specific command
-  openai	Interact with OpenAI models
+  server        Start the phoenix_cli server
+  list          Displays a list of all available models that you can run or manage
+  show          Show full information about a model
+  run           Executes a model based on your specified input
+  embedding     Convert text to embedding
+  exec          Runs a model directly on your local machine
+  pull          Retrieves a model from the registry and stores it locally
+  rm            Remove a model from your local storage
+  help          Provides detailed information and guidance about any specific command
+  openai        Interact with OpenAI models
 
 Flags:
-  -h, --help	Displays help information for the phoenix_cli command
-  -v, --version	Outputs the current version of PhoenixCLI
+  -h, --help    Displays help information for the phoenix_cli command
+  -v, --version Outputs the current version of PhoenixCLI
 
 Use "phoenix_cli [command] --help" for more information about a command.
 ```
