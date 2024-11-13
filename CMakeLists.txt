@@ -112,9 +112,18 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS
 #target_link_libraries(${PROJECT_NAME} PRIVATE llama)
 # ************************************************************************
 
+
+
+
 # Add the llama.cpp submodule
 add_subdirectory(${PROJECT_SOURCE_DIR}/external/llama.cpp)
 add_subdirectory(${PROJECT_SOURCE_DIR}/external/llama.cpp/common)
+
+#Add the whisper.cpp submodule
+#add_subdirectory(${PROJECT_SOURCE_DIR}/external/whisper.cpp)
+#add_subdirectory(${PROJECT_SOURCE_DIR}/external/whisper.cpp/examples)
+
+
 
 
 # Enable automatic processing of Qt-specific files

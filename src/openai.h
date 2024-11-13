@@ -7,7 +7,9 @@
 #include <nlohmann/json.hpp>
 #include <curl/curl.h>
 
-using json = nlohmann::json;
+namespace PhoenixOpenAI {
+    using json = nlohmann::json;
+}
 
 class OpenAI {
 public:
@@ -20,7 +22,7 @@ public:
     OpenAI& operator=(OpenAI&&) noexcept;
 
     void stream_chat_completion(const std::string& model,
-                                const json& messages,
+                                const PhoenixOpenAI::json& messages,
                                 const std::function<bool(const std::string&)>& callback,
                                 std::atomic<bool>& connection_alive);
 

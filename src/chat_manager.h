@@ -1,22 +1,16 @@
-//
-// Created by Amir Kouhkan on 8/6/24.
-//
-
-#ifndef PHOENIX_CHAT_MANAGER_H
-#define PHOENIX_CHAT_MANAGER_H
+#pragma once
 
 #include "header.h"
-#include "llama.h"
 
 #include <string>
 #include <vector>
 #include <nlohmann/json.hpp>
 
-using json = nlohmann::json;
 
-
-class ChatManager {
+class PhornixChatManager {
 public:
+    using json = nlohmann::json;
+
     static std::string generate_unique_id();
 
     static bool create_chat_config_file(const std::string &id);
@@ -28,6 +22,3 @@ public:
     static json chat_history_conversation(const std::string &path);
 
 };
-
-
-#endif //PHOENIX_CHAT_MANAGER_H

@@ -13,11 +13,9 @@
 #include <vector>
 #include <filesystem>
 
-using json = nlohmann::json;
-
 namespace fs = std::filesystem;
 
-std::string ChatManager::generate_unique_id() {
+std::string PhornixChatManager::generate_unique_id() {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 9);
@@ -40,12 +38,12 @@ std::string ChatManager::generate_unique_id() {
 }
 
 
-bool ChatManager::create_chat_config_file(const std::string &id) {
+bool PhornixChatManager::create_chat_config_file(const std::string &id) {
     // create chats directory
     DirectoryManager::create_chats_directory();
 
     // create configs in json object
-    json j;
+    PhornixChatManager::json j;
     j["name"] = "Config for Chat ID " + id;
 //    j["load_params"]["n_ctx"] = context_params.n_ctx;
 //    j["load_params"]["n_batch"] = context_params.n_batch;
@@ -75,11 +73,11 @@ bool ChatManager::create_chat_config_file(const std::string &id) {
 
 
 std::string
-ChatManager::save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer) {
+PhornixChatManager::save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer) {
     std::string file_name = DirectoryManager::get_app_home_path() + "/chats/" + id + ".chat.json";
 
     std::ifstream input_file(file_name);
-    json existing_data;
+    PhornixChatManager::json existing_data;
 
     if (input_file.is_open()) {
         input_file >> existing_data;
@@ -87,7 +85,7 @@ ChatManager::save_chat_history(const std::string &id, const std::string &prompt,
     }
 
     if (!existing_data.contains("messages")) {
-        existing_data["messages"] = json::array();
+        existing_data["messages"] = PhornixChatManager::json::array();
     }
 
     // Append the new messages to the existing data
@@ -108,10 +106,9 @@ ChatManager::save_chat_history(const std::string &id, const std::string &prompt,
 }
 
 
-std::vector<std::string> ChatManager::chat_histories() {
+std::vector<std::string> PhornixChatManager::chat_histories() {
     std::string chat_history_path = DirectoryManager::get_app_home_path() + "/chats/";
     std::vector<std::string> chat_list;
-
     for (const auto &chat_entry: fs::directory_iterator(chat_history_path)) {
         if (chat_entry.is_regular_file()) {
             // Ensure the filename does not contain ".config."
@@ -121,16 +118,12 @@ std::vector<std::string> ChatManager::chat_histories() {
             }
         }
     }
-
     return chat_list;
 }
 
-json ChatManager::chat_history_conversation(const std::string &path) {
-//    std::string chat_history_path = DirectoryManager::get_app_home_path() + "/chats/";
-//    for (const auto &chat_entry: fs::directory_iterator(path)) {
-//        if (chat_entry.is_regular_file()) {
+PhornixChatManager::json PhornixChatManager::chat_history_conversation(const std::string &path) {
     std::ifstream input_file(path);
-    json existing_data;
+    PhornixChatManager::json existing_data;
 
     if (input_file.is_open()) {
         input_file >> existing_data;
@@ -139,8 +132,6 @@ json ChatManager::chat_history_conversation(const std::string &path) {
     } else {
         std::cerr << "Unable to open file: " << path << std::endl;
     }
-//        }
-//    }
 
     std::cerr << "File not found: " << path << std::endl;
     return {};

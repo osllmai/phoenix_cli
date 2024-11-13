@@ -30,6 +30,9 @@ endif ()
 # Include directories for dependencies
 include_directories(${OPENSSL_INCLUDE_DIR})
 
+#Add talk llama
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/talk-llama)
+
 # Find required packages
 find_package(CURL REQUIRED)
 # Link SQLite3
@@ -268,6 +271,8 @@ if (WIN32)
     target_link_directories(${LIBRARY_NAME} PUBLIC ${CUDA_INCLUDE_DIRS})
 endif ()
 
+add_subdirectory(server)
+
 # Link libraries based on the platform
 if (APPLE)
     target_link_libraries(${LIBRARY_NAME} PUBLIC
@@ -282,16 +287,9 @@ if (APPLE)
             Threads::Threads
             llama
             common
-
+            webserver
     )
     target_compile_features(${LIBRARY_NAME} PRIVATE cxx_std_11)
-
-    set(MODEL_IMPL_TARGETS
-            llmodel
-            llamamodel-mainline-cpu
-            llamamodel-mainline-cpu-avxonly
-            llamamodel-mainline-metal
-    )
 
 elseif (UNIX)
     target_link_libraries(${LIBRARY_NAME} PUBLIC

@@ -14,12 +14,12 @@ OpenAI::OpenAI(OpenAI&&) noexcept = default;
 OpenAI& OpenAI::operator=(OpenAI&&) noexcept = default;
 
 void OpenAI::stream_chat_completion(const std::string& model,
-                                    const json& messages,
+                                    const PhoenixOpenAI::json& messages,
                                     const std::function<bool(const std::string&)>& callback,
                                     std::atomic<bool>& connection_alive) {
     const std::string url = "https://api.openai.com/v1/chat/completions";
 
-    json payload = {
+    PhoenixOpenAI::json payload = {
             {"model", model},
             {"messages", messages},
             {"stream", true}
@@ -74,7 +74,7 @@ size_t OpenAI::write_callback(char* ptr, size_t size, size_t nmemb, void* user_d
             line = line.substr(6);
             if (line != "[DONE]") {
                 try {
-                    json chunk = json::parse(line);
+                    PhoenixOpenAI::json chunk = PhoenixOpenAI::json::parse(line);
                     if (chunk["choices"][0].contains("delta")) {
                         auto& delta = chunk["choices"][0]["delta"];
                         if (delta.contains("content") && !delta["content"].is_null()) {
@@ -87,7 +87,7 @@ size_t OpenAI::write_callback(char* ptr, size_t size, size_t nmemb, void* user_d
                             }
                         }
                     }
-                } catch (json::exception& e) {
+                } catch (PhoenixOpenAI::json::exception& e) {
                     std::cerr << "JSON error: " << e.what() << std::endl;
                 }
             }

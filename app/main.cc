@@ -25,7 +25,24 @@ public:
 
 public slots:
     void process() {
-        show_commands(argc, argv);
+        if (argc < 2) {
+            std::cerr << "No command specified. Use 'phoenix_cli help' for a list of commands." << std::endl;
+            emit finished();
+            return;
+        }
+
+        PhoenixCommandsList commands;
+
+        std::string command = argv[1];
+        std::vector<std::string> args;
+
+        int argc_condition = command == "server" || command == "embedding" ? 0 : 2;
+        for (int i = argc_condition; i < argc; ++i) {
+            args.push_back(argv[i]);
+        }
+
+        commands.run_command(command, args);
+
         emit finished();  // Signal when the command is done
     }
 
@@ -98,14 +115,8 @@ int main(int argc, char **argv) {
     TrayIconManager trayManager;
 
     // Database management
-    sqlite3 *db;
-    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-    if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-        DatabaseManager::create_tables(db);
-        sqlite3_close(db);
-    } else {
-        std::cerr << "Can't open database" << std::endl;
-    }
+    auto db = DatabaseManager::open_database();
+    DatabaseManager::create_tables(db.get());
 
     // Check if system tray is available
     if (!QSystemTrayIcon::isSystemTrayAvailable()) {

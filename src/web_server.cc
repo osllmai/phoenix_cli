@@ -31,7 +31,6 @@ namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
 
-using json = nlohmann::json;
 using tcp = net::ip::tcp;
 
 // Helper function to convert chat history to string
@@ -158,7 +157,7 @@ void handle_generate_request(std::shared_ptr<tcp::socket> socket, const http::re
     std::cout << model_name << std::endl;
     std::cout << prompt << std::endl;
 
-    json data = model_data(model_name);
+    WebServer::json data = PhoenixModelList::model_data(model_name);
     std::string path;
     std::string prompt_template = data["promptTemplate"].get<std::string>();
 
@@ -199,7 +198,7 @@ void handle_chat_request(std::shared_ptr<tcp::socket> socket, const http::reques
     std::string chat_history_str = chat_history_to_string(chat_history);
 
     std::string path;
-    std::string prompt_template = model_data(model_name)["promptTemplate"].get<std::string>();
+    std::string prompt_template = PhoenixModelList::model_data(model_name)["promptTemplate"].get<std::string>();
 
     sqlite3 *db;
     const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
@@ -278,14 +277,14 @@ void handle_openai_chat_request(std::shared_ptr<tcp::socket> socket, const http:
         // Token callback function
         auto token_callback = [&send_chunk](const std::string &token) -> bool {
             std::cout << "Received token: " << token << std::endl;
-            std::string json_chunk = "data: " + json({{"chunk", token}}).dump() + "\n\n";
+            std::string json_chunk = "data: " + WebServer::json({{"chunk", token}}).dump() + "\n\n";
             bool sent = send_chunk(json_chunk);
             std::cout << "Sent chunk: " << (sent ? "success" : "failure") << std::endl;
             return sent;
         };
 
         // Build the messages for the OpenAI API
-        json messages = json::array({
+        WebServer::json messages = WebServer::json::array({
                                             {{"role", "system"}, {"content", "You are a helpful assistant."}},
                                             {{"role", "user"},   {"content", prompt}}
                                     });
@@ -315,7 +314,7 @@ void handle_openai_chat_request(std::shared_ptr<tcp::socket> socket, const http:
             res.set(http::field::server, "Beast");
             res.set(http::field::content_type, "application/json");
             res.keep_alive(keep_alive);
-            res.body() = json({{"error", e.what()}}).dump();
+            res.body() = WebServer::json({{"error", e.what()}}).dump();
             res.prepare_payload();
             http::write(*socket, res);
         } catch (...) {

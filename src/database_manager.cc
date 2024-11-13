@@ -1,13 +1,8 @@
-//
-// Created by Amir Kouhkan on 8/11/24.
-//
-
 #include "database_manager.h"
+#include "directory_manager.h"
 
-#include <sqlite3.h>
 #include <string>
 #include <iostream>
-
 
 int DatabaseManager::execute_query(sqlite3 *db, const char *sql) {
     char *err = 0;
@@ -104,6 +99,16 @@ std::string DatabaseManager::get_path_by_filename(sqlite3* db, const std::string
     std::cout << path ;
     return path;
 }
+
+std::unique_ptr<sqlite3, decltype(&sqlite3_close)> DatabaseManager::open_database() {
+    sqlite3* db;
+    const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
+    if (sqlite3_open(db_path.c_str(), &db) != SQLITE_OK) {
+        throw std::runtime_error("Failed to open database");
+    }
+    return {db, sqlite3_close};
+}
+
 
 std::string DatabaseManager::get_path_by_model_name(sqlite3 *db, const std::string &model_name) {
     const std::string query = "SELECT path FROM tbl_models WHERE model_name = ?;";

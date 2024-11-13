@@ -37,7 +37,9 @@ namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
 
-using json = nlohmann::json;
+namespace WebServer {
+    using json = nlohmann::json;
+}
 using tcp = net::ip::tcp;
 
 

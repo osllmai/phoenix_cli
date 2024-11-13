@@ -118,8 +118,8 @@ void PhoenixChat::handle_conversation(PhoenixChat::LlamaResources &resources, bo
     std::vector<llama_chat_message> messages;
     std::vector<char> formatted(llama_n_ctx(resources.ctx));
     int prev_len = 0;
-    std::string unique_identifier = ChatManager::generate_unique_id();
-    ChatManager::create_chat_config_file(unique_identifier);
+    std::string unique_identifier = PhornixChatManager::generate_unique_id();
+    PhornixChatManager::create_chat_config_file(unique_identifier);
 
     while (true) {
         printf("\033[32m> \033[0m");
@@ -167,7 +167,7 @@ void PhoenixChat::handle_conversation(PhoenixChat::LlamaResources &resources, bo
             return;
         }
 
-        std::string path = ChatManager::save_chat_history(unique_identifier, user_input, full_response);
+        std::string path = PhornixChatManager::save_chat_history(unique_identifier, user_input, full_response);
 
         sqlite3 *db;
         const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
