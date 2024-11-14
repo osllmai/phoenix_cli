@@ -92,6 +92,14 @@ void PhoenixCommandsList::handle_run(const std::vector<std::string> &args) {
 
 void PhoenixCommandsList::handle_pull(const std::vector<std::string> &args) {
     const std::string &model_name = args[0];
+    auto db = DatabaseManager::open_database();
+
+    std::string check_model_exist = DatabaseManager::get_path_by_model_name(db.get(), model_name);
+    if(!check_model_exist.empty()) {
+        std::cout << "Model already downloaded!" << std::endl;
+        return;
+    }
+
     PhoenixCommandsList::json model = PhoenixModelList::model_data(model_name);
     std::string model_url = PhoenixModelList::get_url_llm_download(model_name);
 
@@ -106,7 +114,7 @@ void PhoenixCommandsList::handle_pull(const std::vector<std::string> &args) {
 
     PhoenixDownloadModel downloader(model_url, model_path);
     if (downloader.download()) {
-        auto db = DatabaseManager::open_database();
+
         DatabaseManager::insert_models(db.get(), model_name, model_path);
         std::cout << "Model downloaded successfully!" << std::endl;
     } else {

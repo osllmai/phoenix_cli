@@ -169,71 +169,66 @@ void PhoenixChat::handle_conversation(PhoenixChat::LlamaResources &resources, bo
 
         std::string path = PhornixChatManager::save_chat_history(unique_identifier, user_input, full_response);
 
-        sqlite3 *db;
-        const std::string db_path = DirectoryManager::get_app_home_path() + "/phoenix.db";
-        if (sqlite3_open(db_path.c_str(), &db) == SQLITE_OK) {
-            // Insert chat entry with only non-null columns
-            std::string insert_chat_sql = "INSERT INTO chats (id, created_at, sharing, context_length, description, embeddings_provider, include_profile_context, include_workspace_instructions, model, name, prompt, temperature) VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
-            sqlite3_stmt *stmt;
-            std::string current_time = get_current_time();
-            if (sqlite3_prepare_v2(db, insert_chat_sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
-                sqlite3_bind_int64(stmt, 1, std::stol(unique_identifier));
-                sqlite3_bind_text(stmt, 2, current_time.c_str(), -1, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 3, 2048);
-                sqlite3_bind_text(stmt, 4, "", -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 5, "", -1, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 6, 0);
-                sqlite3_bind_int(stmt, 7, 0);
-                sqlite3_bind_text(stmt, 8, "", -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 9, "", -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 10, prompt.c_str(), -1, SQLITE_STATIC);
-                sqlite3_bind_double(stmt, 11, 0.5);
+        auto db = DatabaseManager::open_database();
 
-                if (sqlite3_step(stmt) != SQLITE_DONE) {
-                    std::cerr << "Error inserting chat: " << sqlite3_errmsg(db) << std::endl;
-                }
-                sqlite3_finalize(stmt);
+        // Insert chat entry with only non-null columns
+        std::string insert_chat_sql = "INSERT INTO chats (id, created_at, sharing, context_length, description, embeddings_provider, include_profile_context, include_workspace_instructions, model, name, prompt, temperature) VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        sqlite3_stmt *stmt;
+        std::string current_time = get_current_time();
+        if (sqlite3_prepare_v2(db.get(), insert_chat_sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+            sqlite3_bind_int64(stmt, 1, std::stol(unique_identifier));
+            sqlite3_bind_text(stmt, 2, current_time.c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 3, 2048);
+            sqlite3_bind_text(stmt, 4, "", -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 5, "", -1, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 6, 0);
+            sqlite3_bind_int(stmt, 7, 0);
+            sqlite3_bind_text(stmt, 8, "", -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 9, "", -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 10, prompt.c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_double(stmt, 11, 0.5);
+
+            if (sqlite3_step(stmt) != SQLITE_DONE) {
+                std::cerr << "Error inserting chat: " << sqlite3_errmsg(db.get()) << std::endl;
+            }
+            sqlite3_finalize(stmt);
             } else {
-                std::cerr << "Error preparing chat insert statement: " << sqlite3_errmsg(db) << std::endl;
+                std::cerr << "Error preparing chat insert statement: " << sqlite3_errmsg(db.get()) << std::endl;
             }
 
             // Insert user message entry
             std::string insert_user_message_sql = "INSERT INTO messages (chat_id, created_at, content, role, sequence_number) VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?);";
-            if (sqlite3_prepare_v2(db, insert_user_message_sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+            if (sqlite3_prepare_v2(db.get(), insert_user_message_sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
                 sqlite3_bind_int64(stmt, 1, std::stol(unique_identifier));
                 sqlite3_bind_text(stmt, 2, user_input.c_str(), -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 3, "user", -1, SQLITE_STATIC);
                 sqlite3_bind_int(stmt, 4, 1);
 
                 if (sqlite3_step(stmt) != SQLITE_DONE) {
-                    std::cerr << "Error inserting user message: " << sqlite3_errmsg(db) << std::endl;
+                    std::cerr << "Error inserting user message: " << sqlite3_errmsg(db.get()) << std::endl;
                 }
                 sqlite3_finalize(stmt);
             } else {
-                std::cerr << "Error preparing user message insert statement: " << sqlite3_errmsg(db) << std::endl;
+                std::cerr << "Error preparing user message insert statement: " << sqlite3_errmsg(db.get()) << std::endl;
             }
 
             // Insert assistant message entry
             std::string insert_assistant_message_sql = "INSERT INTO messages (chat_id, created_at, content, role, sequence_number) VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?);";
-            if (sqlite3_prepare_v2(db, insert_assistant_message_sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+            if (sqlite3_prepare_v2(db.get(), insert_assistant_message_sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
                 sqlite3_bind_int64(stmt, 1, std::stol(unique_identifier));
                 sqlite3_bind_text(stmt, 2, full_response.c_str(), -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 3, "assistant", -1, SQLITE_STATIC);
                 sqlite3_bind_int(stmt, 4, 2); // sequence_number
 
                 if (sqlite3_step(stmt) != SQLITE_DONE) {
-                    std::cerr << "Error inserting assistant message: " << sqlite3_errmsg(db) << std::endl;
+                    std::cerr << "Error inserting assistant message: " << sqlite3_errmsg(db.get()) << std::endl;
                 }
                 sqlite3_finalize(stmt);
             } else {
-                std::cerr << "Error preparing assistant message insert statement: " << sqlite3_errmsg(db) << std::endl;
+                std::cerr << "Error preparing assistant message insert statement: " << sqlite3_errmsg(db.get()) << std::endl;
             }
-
-            sqlite3_close(db);
-        } else {
-            std::cerr << "Error opening database: " << sqlite3_errmsg(db) << std::endl;
         }
-    }
+
 
     for (auto &msg: messages) {
         free(const_cast<char *>(msg.content));

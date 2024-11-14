@@ -37,102 +37,104 @@ std::string PhornixChatManager::generate_unique_id() {
     return unique_number;
 }
 
-
 bool PhornixChatManager::create_chat_config_file(const std::string &id) {
-    // create chats directory
-    DirectoryManager::create_chats_directory();
+    try {
+        DirectoryManager::create_chats_directory();
 
-    // create configs in json object
-    PhornixChatManager::json j;
-    j["name"] = "Config for Chat ID " + id;
-//    j["load_params"]["n_ctx"] = context_params.n_ctx;
-//    j["load_params"]["n_batch"] = context_params.n_batch;
-//    j["load_params"]["seed"] = params.seed;
-//    j["inference_params"]["n_threads"] = context_params.n_threads;
-//    j["inference_params"]["n_predict"] = params.n_predict;
-//    j["inference_params"]["top_p"] = params.top_p;
-//    j["inference_params"]["top_k"] = params.top_k;
-//    j["inference_params"]["temp"] = params.temp;
-//    j["inference_params"]["repeat_penalty"] = params.repeat_penalty;
-//    j["inference_params"]["repeat_penalty"] = params.prompt;
+        PhornixChatManager::json j;
+        j["name"] = "Config for Chat ID " + id;
 
-    std::string json_str = j.dump(4);
+        std::string json_str = j.dump(4);
 
-    // write json file
-    std::ofstream output_file(DirectoryManager::get_app_home_path() + "/chats/" + id + ".config.chat.json");
-    if (output_file.is_open()) {
+        std::ofstream output_file(DirectoryManager::get_app_home_path() + "/chats/" + id + ".config.chat.json");
+        if (!output_file) {
+            std::cerr << "Error: Unable to open JSON config file for writing\n";
+            return false;
+        }
         output_file << json_str;
         output_file.close();
-    } else {
-        std::cerr << "Unable to open json file" << std::endl;
+
+    } catch (const std::exception &e) {
+        std::cerr << "Exception occurred while creating chat config file: " << e.what() << '\n';
         return false;
     }
-
     return true;
 }
 
-
-std::string
-PhornixChatManager::save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer) {
+std::string PhornixChatManager::save_chat_history(const std::string &id, const std::string &prompt, const std::string &answer) {
     std::string file_name = DirectoryManager::get_app_home_path() + "/chats/" + id + ".chat.json";
-
-    std::ifstream input_file(file_name);
     PhornixChatManager::json existing_data;
 
-    if (input_file.is_open()) {
-        input_file >> existing_data;
-        input_file.close();
+    try {
+        std::ifstream input_file(file_name);
+        if (input_file.is_open()) {
+            input_file >> existing_data;
+            input_file.close();
+        }
+    } catch (const std::exception &e) {
+        std::cerr << "Error reading chat history from file: " << e.what() << '\n';
     }
 
     if (!existing_data.contains("messages")) {
         existing_data["messages"] = PhornixChatManager::json::array();
     }
 
-    // Append the new messages to the existing data
-    existing_data["messages"].push_back({{"role",    "user"},
-                                         {"content", prompt}});
-    existing_data["messages"].push_back({{"role",    "assistant"},
-                                         {"content", answer}});
+    existing_data["messages"].push_back({{"role", "user"}, {"content", prompt}});
+    existing_data["messages"].push_back({{"role", "assistant"}, {"content", answer}});
 
-    std::ofstream output_file(file_name);
-    if (output_file.is_open()) {
+    try {
+        std::ofstream output_file(file_name);
+        if (!output_file) {
+            std::cerr << "Error: Unable to open chat history file for writing\n";
+            return "";
+        }
         output_file << existing_data.dump(4);
         output_file.close();
-    } else {
-        std::cerr << "Unable to open json file" << std::endl;
+    } catch (const std::exception &e) {
+        std::cerr << "Exception occurred while saving chat history: " << e.what() << '\n';
         return "";
     }
+
     return file_name;
 }
-
 
 std::vector<std::string> PhornixChatManager::chat_histories() {
     std::string chat_history_path = DirectoryManager::get_app_home_path() + "/chats/";
     std::vector<std::string> chat_list;
-    for (const auto &chat_entry: fs::directory_iterator(chat_history_path)) {
-        if (chat_entry.is_regular_file()) {
-            // Ensure the filename does not contain ".config."
-            std::string filename = chat_entry.path().filename().string();
-            if (filename.find(".config.") == std::string::npos) {
-                chat_list.push_back(filename);
+
+    try {
+        for (const auto &chat_entry : fs::directory_iterator(chat_history_path)) {
+            if (chat_entry.is_regular_file()) {
+                std::string filename = chat_entry.path().filename().string();
+                if (filename.find(".config.") == std::string::npos) {
+                    chat_list.push_back(filename);
+                }
             }
         }
+    } catch (const fs::filesystem_error &e) {
+        std::cerr << "Filesystem error while accessing chat histories: " << e.what() << '\n';
     }
+
     return chat_list;
 }
 
 PhornixChatManager::json PhornixChatManager::chat_history_conversation(const std::string &path) {
-    std::ifstream input_file(path);
     PhornixChatManager::json existing_data;
 
-    if (input_file.is_open()) {
-        input_file >> existing_data;
-        input_file.close();
-        return existing_data;
-    } else {
-        std::cerr << "Unable to open file: " << path << std::endl;
+    try {
+        std::ifstream input_file(path);
+        if (input_file.is_open()) {
+            input_file >> existing_data;
+            input_file.close();
+        } else {
+            std::cerr << "Error: Unable to open chat history file: " << path << '\n';
+        }
+    } catch (const std::exception &e) {
+        std::cerr << "Exception occurred while reading chat history conversation: " << e.what() << '\n';
     }
 
-    std::cerr << "File not found: " << path << std::endl;
-    return {};
+    if (existing_data.empty()) {
+        std::cerr << "Warning: Chat history conversation data is empty or invalid for file: " << path << '\n';
+    }
+    return existing_data;
 }

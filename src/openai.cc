@@ -6,7 +6,12 @@ OpenAI::OpenAI(std::string api_key)
         : m_api_key(std::move(api_key)),
           m_curl(nullptr, curl_easy_cleanup)
 {
-    init_curl();
+    try {
+        init_curl();
+    } catch (const std::exception& e) {
+        std::cerr << "Initialization error: " << e.what() << std::endl;
+        throw; // Rethrow the exception after logging
+    }
 }
 
 OpenAI::~OpenAI() = default;
@@ -25,36 +30,52 @@ void OpenAI::stream_chat_completion(const std::string& model,
             {"stream", true}
     };
 
-    std::string payload_str = payload.dump();
+    std::string payload_str;
+    try {
+        payload_str = payload.dump();
+    } catch (const std::exception& e) {
+        std::cerr << "Error serializing JSON payload: " << e.what() << std::endl;
+        return;
+    }
 
     struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    std::string auth_header = "Authorization: Bearer " + m_api_key;
-    headers = curl_slist_append(headers, auth_header.c_str());
+    try {
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        std::string auth_header = "Authorization: Bearer " + m_api_key;
+        headers = curl_slist_append(headers, auth_header.c_str());
 
-    curl_easy_setopt(m_curl.get(), CURLOPT_URL, url.c_str());
-    curl_easy_setopt(m_curl.get(), CURLOPT_POSTFIELDS, payload_str.c_str());
-    curl_easy_setopt(m_curl.get(), CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(m_curl.get(), CURLOPT_URL, url.c_str());
+        curl_easy_setopt(m_curl.get(), CURLOPT_POSTFIELDS, payload_str.c_str());
+        curl_easy_setopt(m_curl.get(), CURLOPT_HTTPHEADER, headers);
 
-    CallbackData callback_data = {std::string(), callback, connection_alive};
+        CallbackData callback_data = {std::string(), callback, connection_alive};
+        curl_easy_setopt(m_curl.get(), CURLOPT_WRITEFUNCTION, write_callback);
+        curl_easy_setopt(m_curl.get(), CURLOPT_WRITEDATA, &callback_data);
 
-    curl_easy_setopt(m_curl.get(), CURLOPT_WRITEFUNCTION, write_callback);
-    curl_easy_setopt(m_curl.get(), CURLOPT_WRITEDATA, &callback_data);
+        CURLcode res = curl_easy_perform(m_curl.get());
+        curl_slist_free_all(headers);
 
-    CURLcode res = curl_easy_perform(m_curl.get());
-
-    curl_slist_free_all(headers);
-
-    if (res != CURLE_OK && res != CURLE_WRITE_ERROR) {
-        throw std::runtime_error(std::string("curl_easy_perform() failed: ") + curl_easy_strerror(res));
+        if (res != CURLE_OK && res != CURLE_WRITE_ERROR) {
+            throw std::runtime_error("curl_easy_perform() failed: " + std::string(curl_easy_strerror(res)));
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error during curl operation: " << e.what() << std::endl;
+        if (headers) {
+            curl_slist_free_all(headers);
+        }
     }
 }
 
 void OpenAI::init_curl() {
-    curl_global_init(CURL_GLOBAL_DEFAULT);
-    m_curl.reset(curl_easy_init());
-    if (!m_curl) {
-        throw std::runtime_error("Failed to initialize libcurl");
+    try {
+        curl_global_init(CURL_GLOBAL_DEFAULT);
+        m_curl.reset(curl_easy_init());
+        if (!m_curl) {
+            throw std::runtime_error("Failed to initialize libcurl");
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Curl initialization failed: " << e.what() << std::endl;
+        throw;
     }
 }
 
@@ -88,7 +109,9 @@ size_t OpenAI::write_callback(char* ptr, size_t size, size_t nmemb, void* user_d
                         }
                     }
                 } catch (PhoenixOpenAI::json::exception& e) {
-                    std::cerr << "JSON error: " << e.what() << std::endl;
+                    std::cerr << "JSON parsing error: " << e.what() << std::endl;
+                } catch (const std::exception& e) {
+                    std::cerr << "Unexpected error in callback processing: " << e.what() << std::endl;
                 }
             }
         }
