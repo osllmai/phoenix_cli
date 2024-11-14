@@ -128,7 +128,7 @@ void PhoenixCommandsList::handle_list(const std::vector<std::string> &args) {
     if (option == "--local") {
         std::cout << R"(
 List models which downloaded
-----------------------------\n
+----------------------------
 )";
         auto db = DatabaseManager::open_database();
         DatabaseManager::read_models(db.get());
